@@ -43,7 +43,53 @@
             else if (t === '\u00BB') { steps[s].textContent = '+'; }
         }
 
-        // 4) Subtitles as plain text UNDERNEATH each button (sibling div, not inside it).
+        // 4) Message log becomes a "Logs" sub-tab under Stats, so the top
+        //    banner space is freed but the full log stays one tap away.
+        var stats = document.querySelector('#mTabStats');
+        var mq = document.querySelector('#msgQueue');
+        if (stats && mq) {
+            var navUl = stats.querySelector(':scope > .b-tabs > nav.tabs > ul') || stats.querySelector('.tabs > ul');
+            var section = stats.querySelector(':scope > .b-tabs > section.tab-content') || stats.querySelector('section.tab-content');
+            if (navUl && section) {
+                var pane = document.getElementById('mLogsPane');
+                if (!pane) {
+                    pane = document.createElement('div');
+                    pane.id = 'mLogsPane';
+                    pane.className = 'tab-item';
+                    section.appendChild(pane);
+                }
+                if (mq.parentElement !== pane) {
+                    pane.appendChild(mq);
+                }
+                if (!navUl.querySelector('.m-logs-li')) {
+                    var li = document.createElement('li');
+                    li.className = 'm-logs-li';
+                    var a = document.createElement('a');
+                    a.textContent = 'Logs';
+                    li.appendChild(a);
+                    navUl.appendChild(li);
+                    // Visibility is driven by the .m-logs-open class on the section
+                    // (CSS !important hides Vue's panes) so Vue's own v-show state
+                    // is never disturbed and restores itself on the way back.
+                    a.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var lis = navUl.querySelectorAll('li');
+                        for (var x = 0; x < lis.length; x++) { lis[x].classList.remove('is-active'); }
+                        li.classList.add('is-active');
+                        section.classList.add('m-logs-open');
+                    });
+                    navUl.addEventListener('click', function (e) {
+                        var t = e.target.closest('li');
+                        if (t && !t.classList.contains('m-logs-li')) {
+                            section.classList.remove('m-logs-open');
+                            li.classList.remove('is-active');
+                        }
+                    }, true);
+                }
+            }
+        }
+
+        // 5) Subtitles as plain text UNDERNEATH each button (sibling div, not inside it).
         var btns = document.querySelectorAll('#foreign button.attack[label], #foreign .tspy button[label]');
         for (var i = 0; i < btns.length; i++) {
             var btn = btns[i];

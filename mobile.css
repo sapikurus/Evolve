@@ -265,6 +265,15 @@
     .b-tabs .tabs li {
         flex-shrink: 0;
     }
+    /* Stats sub-tabs (Stats/Achievements/Perks/Logs) must all fit on one screen */
+    .main #mTabStats .b-tabs .tabs li {
+        flex-shrink: 1;
+        min-width: 0;
+    }
+    .main #mTabStats .b-tabs .tabs a {
+        padding: .7em .55em;
+        font-size: .82rem;
+    }
 
     /* Sub tab sections should not lock to viewport height */
     .main .content .mtab {
@@ -375,6 +384,52 @@
     .main > div.popper.wide,
     .main > div.popper.wide.w22 {
         max-width: 92vw;
+    }
+
+    /* Market: rows wrap instead of running off the right edge.
+       The game uses fixed desktop widths (8rem name, 23rem spacers). */
+    .main .market-item {
+        flex-wrap: wrap;
+        margin-left: 0 !important;
+        row-gap: .35rem;
+        align-items: center;
+        max-width: 100%;
+    }
+    .main .market-item .res { width: auto; min-width: 4.5rem; flex: 0 0 auto; }
+    .main .market-item .trade { margin-left: auto; min-width: 0; }
+    .main .market-item .tradeTotal,
+    .main .market-item .crtTotal,
+    .main .market-item .cntTotal { margin-left: 0 !important; }
+    .main .trade-offer { flex-wrap: wrap; }
+    .main .trade-offer .offer-item { width: auto; min-width: 4rem; }
+    .main .trade-offer .offer-vol { width: auto; min-width: 3rem; }
+
+    /* Logs pane: the message log lives as a "Logs" sub-tab under Stats.
+       The .m-logs-open class hides Vue's panes via !important so Vue's
+       inline v-show state is never touched and restores cleanly. */
+    #mLogsPane { display: none; padding-top: .25rem; }
+    #mTabStats section.tab-content.m-logs-open > [role="tabpanel"] { display: none !important; }
+    #mTabStats section.tab-content.m-logs-open > #mLogsPane { display: block; }
+    .main #mLogsPane .msgQueue,
+    .main #mLogsPane #msgQueue {
+        height: calc(100vh - 20rem) !important;
+        min-height: 45vh;
+        max-height: none;
+        overflow-y: auto;
+        display: block;
+        font-size: .8rem;
+        resize: none;
+        -webkit-overflow-scrolling: touch;
+    }
+    .main #mLogsPane #msgQueueLog {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+    .main #mLogsPane #msgQueueLog p {
+        white-space: normal;
+        line-height: 1.35;
+        margin: 0 0 .15rem;
     }
 
     /* Tables (market, etc.) scroll sideways instead of breaking layout */
