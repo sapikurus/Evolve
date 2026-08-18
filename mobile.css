@@ -126,22 +126,23 @@
        the identical full block lives in the Military tab */
     #c_garrison { display: none !important; }
 
-    /* Foreign powers: wider buttons with room for info subtitles */
+    /* Foreign powers: full-width stacked buttons, info as plain
+       subtitle text UNDERNEATH each button (not crammed inside) */
     .foreign .gaction {
-        width: auto !important;
-        min-width: 30%;
+        width: 100% !important;
+        display: block;
         height: auto !important;
-        min-height: 2.4rem;
+        min-height: 2.2rem;
         line-height: 1.15 !important;
         white-space: normal;
+        margin: .2rem 0 .1rem;
     }
-    .foreign .gaction .m-sub {
-        display: block;
-        width: 100%;
-        font-size: .68rem;
-        line-height: 1.15;
-        margin-top: .15rem;
+    .foreign .tspy, .foreign .sspy { display: block; }
+    .foreign .m-sub {
+        font-size: .72rem;
+        line-height: 1.25;
         opacity: .85;
+        margin: 0 0 .35rem .1rem;
         white-space: normal;
     }
 
