@@ -113,6 +113,13 @@
         font-size: .8rem;
     }
 
+    /* When the Settings tab is open, hide the inventory block
+       so all settings (incl. Import/Export) are reachable */
+    html:has(#mainTabs section.tab-content #settings:not([style*="display: none"])) .leftColumn #resources,
+    html:has(#mainTabs section.tab-content #settings:not([style*="display: none"])) .leftColumn #race {
+        display: none;
+    }
+
     /* Resources: pinned near the top, internal scroll.
        !important beats the game's inline calc() height. */
     .main .resources {
