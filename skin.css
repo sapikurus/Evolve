@@ -1,0 +1,317 @@
+/* ============================================
+   "PIXELBOX" — WorldBox-inspired pixel reskin
+   Chunky beveled panels, square corners,
+   pixel type, olive & gold god-game chrome.
+   Scoped under html.pixel (auto-applied).
+   ============================================ */
+
+html.pixel {
+    /* palette */
+    --px-bg: #171a12;
+    --px-panel: #3a3d2f;
+    --px-panel-hi: #585c46;
+    --px-panel-lo: #22241b;
+    --px-slot: #26281e;
+    --px-slot-deep: #1b1d14;
+    --px-text: #e9e7d2;
+    --px-muted: #a9a78d;
+    --px-gold: #e8c14a;
+    --px-green: #7ec850;
+    --px-blue: #5aa9e6;
+    --px-red: #d95f4b;
+    --px-bevel: 3px solid;
+    --px-bevel-up: #585c46 #22241b #22241b #585c46;
+    --px-bevel-down: #22241b #585c46 #585c46 #22241b;
+}
+
+/* ---------- backdrop & base type ---------- */
+html.pixel {
+    background: #10130c;
+}
+html.pixel body {
+    background: linear-gradient(180deg, #1d2115 0%, #171a12 60%, #10130c 100%);
+    background-attachment: fixed;
+    color: var(--px-text);
+    min-height: 100vh;
+}
+
+html.pixel h1, html.pixel h2, html.pixel h3, html.pixel h4,
+html.pixel .button, html.pixel .tabs a,
+html.pixel .topBar, html.pixel .promoBar,
+html.pixel .dropdown-item, html.pixel .dropdown button,
+html.pixel .race .name, html.pixel .colHeader,
+html.pixel #msgQueueHeader h2, html.pixel .modal-card-title,
+html.pixel .label, html.pixel .bldQueue, html.pixel .queue > span,
+html.pixel .theme > span, html.pixel .localization > span {
+    font-family: "Silkscreen", "Lato", monospace;
+    letter-spacing: .02em;
+}
+
+/* ---------- universal pixel chrome ---------- */
+html.pixel .button,
+html.pixel .input, html.pixel .textarea, html.pixel select,
+html.pixel .select select,
+html.pixel .dropdown-menu,
+html.pixel .modal-card,
+html.pixel .popper,
+html.pixel .notification,
+html.pixel .message {
+    border-radius: 0 !important;
+    box-shadow: none;
+}
+
+/* ---------- buttons: chunky beveled slabs ---------- */
+html.pixel .button,
+html.pixel a.button {
+    background: var(--px-panel);
+    color: var(--px-text);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+    box-shadow: 0 4px 0 var(--px-slot-deep);
+    text-shadow: 1px 1px 0 #000;
+    transition: none;
+}
+html.pixel .button:hover { color: #fff; background: #44473a; border-color: var(--px-bevel-up); }
+html.pixel .button:active,
+html.pixel a.button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--px-slot-deep);
+    border-color: var(--px-bevel-down);
+}
+html.pixel .button.is-primary { background: #4a5d2f; border-color: #6b8a3f #26331a #26331a #6b8a3f; }
+html.pixel .button.is-primary:hover { background: #566d38; }
+html.pixel .button.is-dark { background: var(--px-slot); }
+html.pixel .button[disabled], html.pixel .button.is-disabled {
+    background: var(--px-slot);
+    color: var(--px-muted);
+    opacity: .7;
+}
+
+/* action buttons (build/research/etc.) */
+html.pixel .main .content .action a.button,
+html.pixel .modal .action a.button {
+    background: var(--px-panel);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+    box-shadow: 0 4px 0 var(--px-slot-deep);
+}
+html.pixel .main .content .action a.button:hover { background: #454839; }
+html.pixel .main .content .action .cna a.button,
+html.pixel .action.cna a.button { opacity: .55; filter: grayscale(.5); }
+html.pixel .action a.button span.count,
+html.pixel .action span.on, html.pixel .action span.off,
+html.pixel .action div.special {
+    background: var(--px-slot-deep);
+    color: var(--px-gold);
+    border-radius: 0 !important;
+    font-family: "Silkscreen", monospace;
+    font-size: .7rem;
+}
+
+/* ---------- top & promo bars ---------- */
+html.pixel .topBar {
+    background: var(--px-slot-deep);
+    border-bottom: 3px solid var(--px-panel-lo);
+    color: var(--px-muted);
+}
+html.pixel .topBar .has-text-warning, html.pixel .promoBar .has-text-warning { color: var(--px-gold); }
+html.pixel .promoBar {
+    background: var(--px-slot-deep);
+    border-top: 3px solid var(--px-panel-lo);
+}
+html.pixel .promoBar a { color: var(--px-muted); }
+html.pixel .promoBar a:hover { color: var(--px-gold); }
+
+/* ---------- tabs: framed slots ---------- */
+html.pixel .tabs { border-bottom: none; }
+html.pixel .tabs ul { border-bottom: 3px solid var(--px-panel-lo); }
+html.pixel .tabs a {
+    background: var(--px-slot);
+    color: var(--px-muted);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+    border-bottom: none;
+    margin: 0 3px -3px 0;
+    text-shadow: 1px 1px 0 #000;
+}
+html.pixel .tabs li.is-active a,
+html.pixel .tabs a:hover {
+    background: var(--px-panel);
+    color: var(--px-gold);
+    border-color: var(--px-bevel-up);
+}
+
+/* ---------- panels, queues, resources ---------- */
+html.pixel .main .bldQueue,
+html.pixel .main .msgQueue {
+    background: var(--px-slot);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-down);
+    color: var(--px-blue);
+}
+html.pixel #msgQueueHeader h2 {
+    color: var(--px-green);
+    border-bottom: 2px solid var(--px-panel-lo);
+}
+html.pixel #msgQueueFilters span { color: var(--px-muted); }
+html.pixel #msgQueueFilters span.is-active { color: var(--px-gold); }
+
+html.pixel .resources .resource { color: var(--px-text); }
+html.pixel .resources .resource.alt { background: rgba(255,255,255,.04); }
+html.pixel .resources .resource .interact:hover { color: var(--px-gold); }
+
+html.pixel .race .name { color: var(--px-gold); font-size: 1.05rem; }
+html.pixel .main .race { background: var(--px-slot); border: var(--px-bevel); border-color: var(--px-bevel-down); padding: .4rem .6rem; }
+
+/* text helper colors → palette */
+html.pixel .has-text-warning { color: var(--px-gold) !important; }
+html.pixel .has-text-success { color: var(--px-green) !important; }
+html.pixel .has-text-info    { color: var(--px-blue) !important; }
+html.pixel .has-text-danger  { color: var(--px-red) !important; }
+html.pixel .has-text-advanced{ color: var(--px-muted) !important; }
+html.pixel .has-text-caution { color: #e08b4a !important; }
+html.pixel .has-text-special { color: #b48cff !important; }
+html.pixel .has-text-flair   { color: var(--px-muted) !important; }
+html.pixel a { color: var(--px-blue); }
+html.pixel a:hover { color: #8fc7f2; }
+
+/* ---------- job / trade stepper buttons ---------- */
+html.pixel .main .sub, html.pixel .main .add {
+    background: var(--px-panel);
+    color: var(--px-text);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+    border-radius: 0;
+    text-shadow: 1px 1px 0 #000;
+}
+html.pixel .main .sub:active, html.pixel .main .add:active { border-color: var(--px-bevel-down); }
+html.pixel .main .current {
+    background: var(--px-slot);
+    border-top: 3px solid var(--px-panel-lo);
+    border-bottom: 3px solid var(--px-panel-lo);
+    color: var(--px-gold);
+    border-radius: 0;
+}
+html.pixel .main .zero { color: var(--px-red); }
+
+/* ---------- inputs, dropdowns, switches ---------- */
+html.pixel .input, html.pixel .textarea, html.pixel select, html.pixel .select select {
+    background: var(--px-slot-deep);
+    color: var(--px-text);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-down);
+}
+html.pixel .input:focus, html.pixel .textarea:focus { border-color: var(--px-gold); }
+html.pixel .dropdown-menu {
+    background: var(--px-panel);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+}
+html.pixel .dropdown-item { color: var(--px-text); }
+html.pixel .dropdown-item:hover { background: var(--px-slot-deep); color: var(--px-gold); }
+
+html.pixel .b-switch .check,
+html.pixel .b-checkbox .check,
+html.pixel .switch .check,
+html.pixel .b-checkbox.checkbox .check { border-radius: 0 !important; }
+html.pixel .switch input[type=checkbox] + .check {
+    background: var(--px-slot-deep);
+    border: 2px solid var(--px-panel-hi) !important;
+    border-radius: 0 !important;
+}
+html.pixel .switch input[type=checkbox] + .check:before {
+    border-radius: 0 !important;
+    background: var(--px-muted);
+    box-shadow: none;
+}
+html.pixel .switch input[type=checkbox]:checked + .check {
+    background: var(--px-green) !important;
+    border-color: var(--px-panel-lo) !important;
+}
+html.pixel .switch:hover input[type=checkbox] + .check { background: var(--px-slot); }
+html.pixel .switch:hover input[type=checkbox]:checked + .check { background: var(--px-green) !important; }
+html.pixel .b-switch, html.pixel .b-checkbox, html.pixel .switch, html.pixel .checkbox {
+    font-family: "Silkscreen", "Lato", monospace;
+    font-size: .85rem;
+}
+
+/* ---------- progress bars: chunky fill ---------- */
+html.pixel .progress { border-radius: 0 !important; background: var(--px-slot-deep); border: 2px solid var(--px-panel-lo); }
+html.pixel .progress::-webkit-progress-bar { background: var(--px-slot-deep); }
+html.pixel .progress::-webkit-progress-value { background: var(--px-gold); }
+html.pixel .progress::-moz-progress-bar { background: var(--px-gold); }
+
+/* ---------- modals & popovers ---------- */
+html.pixel .modal-card {
+    background: var(--px-panel);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+}
+html.pixel .modal-card-head, html.pixel .modal-card-foot {
+    background: var(--px-slot);
+    border-radius: 0;
+    border-bottom: 3px solid var(--px-panel-lo);
+}
+html.pixel .modal-card-foot { border-bottom: none; border-top: 3px solid var(--px-panel-lo); }
+html.pixel .modal-card-body { background: var(--px-panel); color: var(--px-text); }
+html.pixel .modal-card-title { color: var(--px-gold); }
+html.pixel .modalBox, html.pixel .industry { background: var(--px-panel); border: var(--px-bevel); border-color: var(--px-bevel-up); }
+
+html.pixel .popper {
+    background: var(--px-slot);
+    color: var(--px-text);
+    border: var(--px-bevel);
+    border-color: var(--px-bevel-up);
+    border-radius: 0;
+}
+html.pixel .main > div.popper { box-shadow: 6px 6px 0 rgba(0,0,0,.5); }
+
+/* ---------- scrollbars: chunky ---------- */
+html.pixel ::-webkit-scrollbar { width: 12px; height: 12px; }
+html.pixel ::-webkit-scrollbar-track { background: var(--px-slot-deep); }
+html.pixel ::-webkit-scrollbar-thumb { background: var(--px-panel-hi); border: 2px solid var(--px-slot-deep); }
+html.pixel ::-webkit-scrollbar-thumb:hover { background: var(--px-gold); }
+
+/* ---------- tables & misc ---------- */
+html.pixel .table { background: transparent; color: var(--px-text); }
+html.pixel .table td, html.pixel .table th { border-color: var(--px-panel-lo); color: var(--px-text); }
+html.pixel hr { background: var(--px-panel-lo); height: 3px; }
+html.pixel .market-item .order {
+    border: 2px solid var(--px-panel-lo) !important;
+    background: var(--px-slot);
+}
+html.pixel .market-item .order:hover { border-color: var(--px-gold) !important; background: var(--px-slot-deep); }
+
+/* evolving progress label */
+html.pixel .evolving::after {
+    font-family: "Silkscreen", monospace;
+    color: var(--px-gold);
+    text-shadow: 1px 1px 0 #000;
+}
+
+/* icon slots: square framed look for svg icons */
+html.pixel svg.gear { fill: var(--px-muted); }
+html.pixel .special:hover svg.gear { fill: var(--px-gold); }
+
+/* ---------- mobile: bottom toolbar à la WorldBox ---------- */
+@media only screen and (max-width: 48rem) {
+    html.pixel #mainTabs > nav.tabs,
+    html.pixel #mainTabs > .tabs {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 35;
+        background: var(--px-slot-deep);
+        border-top: 3px solid var(--px-panel-hi);
+        padding: .35rem .25rem calc(.35rem + env(safe-area-inset-bottom));
+        margin: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+    }
+    html.pixel #mainTabs .tabs ul { border-bottom: none; }
+    html.pixel #mainTabs .tabs a { border-bottom: var(--px-bevel); border-color: var(--px-bevel-up); }
+    html.pixel #mainTabs .tabs li.is-active a { border-color: var(--px-bevel-down); background: var(--px-panel); }
+    html.pixel .main { margin-bottom: 7rem; }
+    html.pixel .promoBar { display: none; } /* keep screen for the game */
+}

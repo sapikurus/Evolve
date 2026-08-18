@@ -1,0 +1,298 @@
+/* Mobile-friendly overrides for Evolve (phones & small tablets) */
+
+@media only screen and (max-width: 48rem) {
+
+    /* ---------- Global ---------- */
+    html {
+        font-size: 13px !important; /* compact: fit more components per screen */
+    }
+    html, body {
+        overflow-x: hidden;
+        max-width: 100vw;
+    }
+
+    a, button, .button, [role="button"], .action, .tab-item {
+        touch-action: manipulation; /* kill double-tap zoom delay */
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .button, a.button {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    /* Prevent iOS auto-zoom on focused inputs */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
+    /* ---------- Top bar ---------- */
+    .topBar {
+        font-size: .8125rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        padding: 0 .25rem;
+    }
+    .topBar::-webkit-scrollbar { display: none; }
+    .topBar .calendar .atime { margin-left: .25rem; }
+
+    /* ---------- Layout: gameplay first ---------- */
+    .main {
+        margin: 1.5rem .5rem 1rem;
+        overflow-y: visible;
+    }
+
+    .main > .columns {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main > .columns > #mainColumn {
+        order: 2;           /* game content below the resource panel */
+        width: 100%;
+        padding: 0;
+    }
+
+    .main > .columns > :first-child {
+        min-width: 0;       /* was 18rem — caused horizontal squeeze */
+    }
+
+    .main .leftColumn {
+        order: 1;           /* side panel first… */
+        height: auto !important; /* was calc(100vh - 2.45rem) */
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        padding: 0;
+    }
+    /* order: message banner → build queue → race → resources → game */
+    .main .leftColumn #sideQueue { order: 0; display: flex; flex-direction: column; }
+    .main .leftColumn #race { order: 1; }
+    .main .leftColumn #resources { order: 2; }
+    #sideQueue #msgQueue { order: -1; }
+
+    /* Race / morale / power header stays compact */
+    .main .race {
+        margin-top: 1.25rem;
+        font-size: 1rem;
+    }
+
+    /* Message log → slim scrolling banner at the very top */
+    .main .msgQueue,
+    .main .msgQueue.right {
+        resize: none;
+        height: 1.8rem !important;   /* beat the game's inline px height */
+        max-height: 1.8rem;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        font-size: .75rem;
+        margin-bottom: .25rem;
+    }
+    #msgQueueHeader, #msgQueueFilters { display: none; }
+    #msgQueueLog {
+        display: flex;
+        flex-direction: column-reverse; /* newest message always visible */
+        overflow: hidden;
+        height: 100%;
+    }
+    #msgQueueLog p {
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.7rem;
+    }
+
+    /* Build queue: compact strip when active */
+    .main .bldQueue {
+        resize: none;
+        height: auto !important;
+        max-height: 4.5rem;
+        font-size: .8rem;
+    }
+
+    /* Resources: pinned near the top, internal scroll.
+       !important beats the game's inline calc() height. */
+    .main .resources {
+        height: auto !important;
+        max-height: 30vh;
+        padding-right: .25rem;
+        margin-top: .25rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    .main .resources .resource {
+        min-height: 1.4rem;
+        align-items: center;
+        font-size: .875rem;
+    }
+    .main .resources .resource .interact {
+        padding: .25rem .375rem;
+        margin: -.25rem -.375rem; /* bigger invisible tap area */
+    }
+
+    /* ---------- Tabs: big, swipeable ---------- */
+    /* NOTE: only the <nav> scrolls — a scrollable <ul> inside would
+       have zero scroll range and trap the touch gesture. */
+    .b-tabs nav.tabs, .b-tabs .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+        scrollbar-width: none;
+    }
+    .b-tabs .tabs ul {
+        flex-wrap: nowrap;
+        overflow: visible;
+        scrollbar-width: none;
+    }
+    .b-tabs .tabs ul::-webkit-scrollbar,
+    .b-tabs nav.tabs::-webkit-scrollbar { display: none; }
+    .b-tabs .tabs a {
+        padding: .7em 1em;
+        font-size: 1rem;
+        white-space: nowrap;
+    }
+    .b-tabs .tabs li {
+        flex-shrink: 0;
+    }
+
+    /* Sub tab sections should not lock to viewport height */
+    .main .content .mtab {
+        height: auto;
+    }
+    #evolution {
+        height: auto;
+    }
+
+    /* ---------- Action buttons: compact but still tappable ---------- */
+    .main .content .action a.button,
+    .main .content .action span.oldTech {
+        min-height: 34px;
+        height: auto;
+        line-height: 1.15;
+        padding: .2rem .5rem;
+        font-size: .875rem;
+        margin: .25rem .25rem 0 0;
+        display: inline-flex;
+        align-items: center;
+    }
+    .main .content .action a.button .aTitle {
+        line-height: 1.15;
+        align-self: center;
+    }
+    .main .content .action a.button span.count,
+    .main .content .action span.on,
+    .main .content .action span.off,
+    .main .content .action div.special {
+        height: 1.125rem;
+        line-height: 1.125rem;
+        font-size: .75rem;
+    }
+
+    /* Generic buttons */
+    .button {
+        min-height: 2.25rem;
+    }
+
+    /* ---------- Job / trade +/- controls ---------- */
+    .main .sub, .main .add {
+        min-height: 2rem;
+        line-height: 2rem;
+        padding: 0 .625rem;
+        font-size: 1rem;
+    }
+    .main .current {
+        min-height: 2rem;
+        line-height: 2rem;
+        font-size: 1rem;
+        min-width: 3.5rem;
+    }
+    .main .zero {
+        min-height: 2rem;
+        line-height: 2rem;
+        display: inline-block;
+    }
+
+    /* Settings dropdowns & small inputs */
+    .main .queue .dropdown button,
+    .main .theme .dropdown button,
+    .main .localization .dropdown button {
+        height: 2.25rem;
+        padding: 0 1rem;
+        font-size: 1rem;
+    }
+    .main .keyMap, .main .msgInput,
+    .main .keyMap input, .main .msgInput input {
+        height: 2rem;
+        line-height: 2rem;
+    }
+    .dropdown-menu .dropdown-item {
+        padding: .5rem 1rem;
+        font-size: 1rem;
+    }
+
+    /* Checkboxes / switches get a bit more breathing room */
+    .b-checkbox.checkbox, .switch {
+        min-height: 2rem;
+    }
+
+    /* ---------- Modals & popovers ---------- */
+    .modal-card {
+        width: auto;
+        margin: 0 .5rem;
+        max-height: calc(100vh - 3rem);
+    }
+    .modal-card-body {
+        padding: 1rem .75rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-content, .modal-card,
+    .main .modal .action,
+    .modal .action {
+        min-width: 0 !important;
+    }
+    .modal .action a.button {
+        width: 100%;
+        margin-right: 0;
+        min-height: 2.75rem;
+        height: auto;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* Tooltips / poppers must fit the screen */
+    .main > div.popper,
+    .main > div.popper.wide,
+    .main > div.popper.wide.w22 {
+        max-width: 92vw;
+    }
+
+    /* Tables (market, etc.) scroll sideways instead of breaking layout */
+    .main .content table,
+    .modal-card-body table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Settings / misc long rows */
+    .main .content .settings > div,
+    .main .content .row {
+        max-width: 100%;
+    }
+
+    /* Footer */
+    .promoBar {
+        font-size: .75rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        gap: .75rem;
+        padding: 0 .5rem;
+        justify-content: flex-start;
+    }
+    .promoBar::-webkit-scrollbar { display: none; }
+}
