@@ -21,7 +21,15 @@
             }
         }
 
-        // 2) Subtitles as plain text UNDERNEATH each button (sibling div, not inside it).
+        // 2) Job / crafter steppers: replace « » glyphs with − +
+        var steps = document.querySelectorAll('.sub > span, .add > span');
+        for (var s = 0; s < steps.length; s++) {
+            var t = steps[s].textContent;
+            if (t === '\u00AB') { steps[s].textContent = '\u2212'; }
+            else if (t === '\u00BB') { steps[s].textContent = '+'; }
+        }
+
+        // 3) Subtitles as plain text UNDERNEATH each button (sibling div, not inside it).
         var btns = document.querySelectorAll('#foreign button.attack[label], #foreign .tspy button[label]');
         for (var i = 0; i < btns.length; i++) {
             var btn = btns[i];

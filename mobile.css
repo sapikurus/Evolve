@@ -113,13 +113,67 @@
         font-size: .8rem;
     }
 
-    /* Gov/civics sub-tab panes: unlock fixed viewport height so the
-       foreign-powers block can be scrolled to (was clipped, unscrollable) */
-    .govTabs2 > section,
-    .resTabs > section {
+    /* Kill ALL of the game's inner fixed-height scroll panes
+       (Government, Research, Market, Settings, Hell reports, …)
+       so the whole page scrolls naturally instead.
+       NOTE: must use `.main`-prefixed selectors — the game's own
+       rules are `.main .resTabs>section` etc. and would otherwise
+       win on specificity. */
+    .main .b-tabs > section,
+    .main .resTabs > section,
+    .main .govTabs2 > section,
+    .main .govTabs > section,
+    .main .content .mtab,
+    .main .content .settings,
+    .main .content .tab-item,
+    #evolution,
+    .main #hellAnalysis,
+    .main .hellReports > div {
         position: static !important;
+        top: auto !important;
+        bottom: auto !important;
         height: auto !important;
+        max-height: none !important;
         overflow: visible !important;
+    }
+
+    /* ---------- Jobs: one row per job, minus/plus buttons ---------- */
+    .main .jobList { max-width: none !important; }
+    .main .job {
+        min-width: 0 !important;
+        margin-left: 0;
+        width: 100%;
+        flex-wrap: nowrap;
+    }
+    .main .job .job_label {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .main .job .job_label :first-child {
+        width: auto !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .main .job .job_label :nth-child(2) {
+        min-width: 3rem;
+        flex: 0 0 auto;
+    }
+    .main .job .controls {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: nowrap;
+        margin-left: .25rem;
+    }
+    .main .job .controls .sub,
+    .main .job .controls .add {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.25rem;
+        font-weight: 700;
     }
 
     /* Government tab: hide the duplicated garrison block —
