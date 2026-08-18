@@ -21,7 +21,21 @@
             }
         }
 
-        // 2) Job / crafter steppers: replace « » glyphs with − +
+        // 2) Scroll janitor: the game locks the page with html.is-clipped
+        //    (overflow:hidden) while a modal is open; if the modal was torn
+        //    down without cleanup the lock sticks and nothing can scroll.
+        var root = document.documentElement;
+        if (root.classList.contains('is-clipped') && !document.querySelector('.modal.is-active, .b-modal.is-active, .dialog.is-active')) {
+            root.classList.remove('is-clipped');
+        }
+        if (root.style.overflow === 'hidden' && !document.querySelector('.modal.is-active')) {
+            root.style.overflow = '';
+        }
+        if (document.body && document.body.style.overflow === 'hidden' && !document.querySelector('.modal.is-active')) {
+            document.body.style.overflow = '';
+        }
+
+        // 3) Job / crafter steppers: replace « » glyphs with − +
         var steps = document.querySelectorAll('.sub > span, .add > span');
         for (var s = 0; s < steps.length; s++) {
             var t = steps[s].textContent;
@@ -29,7 +43,7 @@
             else if (t === '\u00BB') { steps[s].textContent = '+'; }
         }
 
-        // 3) Subtitles as plain text UNDERNEATH each button (sibling div, not inside it).
+        // 4) Subtitles as plain text UNDERNEATH each button (sibling div, not inside it).
         var btns = document.querySelectorAll('#foreign button.attack[label], #foreign .tspy button[label]');
         for (var i = 0; i < btns.length; i++) {
             var btn = btns[i];
