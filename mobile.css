@@ -113,6 +113,38 @@
         font-size: .8rem;
     }
 
+    /* Gov/civics sub-tab panes: unlock fixed viewport height so the
+       foreign-powers block can be scrolled to (was clipped, unscrollable) */
+    .govTabs2 > section,
+    .resTabs > section {
+        position: static !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    /* Government tab: hide the duplicated garrison block —
+       the identical full block lives in the Military tab */
+    #c_garrison { display: none !important; }
+
+    /* Foreign powers: wider buttons with room for info subtitles */
+    .foreign .gaction {
+        width: auto !important;
+        min-width: 30%;
+        height: auto !important;
+        min-height: 2.4rem;
+        line-height: 1.15 !important;
+        white-space: normal;
+    }
+    .foreign .gaction .m-sub {
+        display: block;
+        width: 100%;
+        font-size: .68rem;
+        line-height: 1.15;
+        margin-top: .15rem;
+        opacity: .85;
+        white-space: normal;
+    }
+
     /* When the Settings tab is open, hide the inventory block
        so all settings (incl. Import/Export) are reachable */
     html:has(#mainTabs section.tab-content #settings:not([style*="display: none"])) .leftColumn #resources,
