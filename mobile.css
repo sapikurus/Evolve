@@ -6,8 +6,19 @@
     html {
         font-size: 13px !important; /* compact: fit more components per screen */
     }
-    html, body {
-        overflow-x: hidden;
+    html {
+        /* The game sets html{overflow-y:hidden} (desktop design: every pane
+           is an inner scroller). On mobile we scroll the whole page instead,
+           so the root MUST be allowed to scroll — overflow:hidden here makes
+           touch/wheel scrolling silently dead (JS scrollTo still works,
+           which is why it evades desktop testing). */
+        overflow-y: auto !important;
+        /* clip (not hidden): hidden on the root also kills touch scroll
+           on mobile Chrome; clip trims without becoming a scroll container */
+        overflow-x: clip;
+    }
+    body {
+        overflow-x: clip;
         max-width: 100vw;
     }
 
