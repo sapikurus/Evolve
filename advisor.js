@@ -24,40 +24,73 @@
   // 'evolved'. We try that first, then scan every key for anything that
   // LZString can decompress into an object with a .resource map — so the
   // advisor self-locates the key regardless of build.
+  // Some builds attach the lib as window.LZString, some as a module global.
   function getLZ() {
-    return window.LZString || window.LZ || null;
+    return window.LZString || window.LZ || window.lzString || null;
+  }
+
+  // A valid Evolve save is a JSON object with a resource map. We accept it if it
+  // has resource OR looks like a save (has several known top-level keys), so a
+  // slightly different build still validates.
+  function looksLikeSave(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+    if (obj.resource && typeof obj.resource === 'object') return true;
+    var markers = ['resource', 'tech', 'city', 'civic', 'race', 'evolution'];
+    var hits = 0;
+    for (var i = 0; i < markers.length; i++) if (obj[markers[i]]) hits++;
+    return hits >= 2;
   }
 
   function tryDecode(LZ, raw) {
     if (!raw || typeof raw !== 'string') return null;
-    var json =
-      LZ.decompressFromBase64(raw) ||
-      LZ.decompressFromEncodedURIComponent(raw) ||
-      LZ.decompress(raw);
-    if (!json) return null;
-    try {
-      var obj = JSON.parse(json);
-      return obj && obj.resource ? obj : null;
-    } catch (e) {
-      return null;
+    // Try every LZString variant; also try raw JSON in case a build stores plain.
+    var candidates = [];
+    try { candidates.push(LZ.decompressFromBase64(raw)); } catch (e) {}
+    try { candidates.push(LZ.decompressFromEncodedURIComponent(raw)); } catch (e) {}
+    try { candidates.push(LZ.decompressFromUTF16(raw)); } catch (e) {}
+    try { candidates.push(LZ.decompress(raw)); } catch (e) {}
+    candidates.push(raw); // plain JSON fallback
+    for (var i = 0; i < candidates.length; i++) {
+      var json = candidates[i];
+      if (!json) continue;
+      try {
+        var obj = JSON.parse(json);
+        if (looksLikeSave(obj)) return obj;
+      } catch (e) { /* not this one */ }
     }
+    return null;
   }
+
+  // Remember which key worked so refreshes are instant, and expose debug info.
+  var foundKey = null;
+  var lastKeys = [];
 
   function loadSave() {
     var LZ = getLZ();
-    if (!LZ) return null;
-    // Preferred key first.
-    var preferred = ['evolved', 'evolve', 'save'];
-    for (var i = 0; i < preferred.length; i++) {
-      var s = tryDecode(LZ, localStorage.getItem(preferred[i]));
-      if (s) return s;
+    if (!LZ) { lastKeys = ['(LZString not loaded yet)']; return null; }
+
+    // If we already found the key, use it directly.
+    if (foundKey) {
+      var quick = tryDecode(LZ, localStorage.getItem(foundKey));
+      if (quick) return quick;
+      foundKey = null; // key changed — fall through to rescan
     }
-    // Fallback: scan everything.
+
+    // Preferred keys first, then scan everything.
+    var preferred = ['evolved', 'evolve', 'save', 'evolveSave', 'gameSave'];
+    var tried = {};
+    for (var i = 0; i < preferred.length; i++) {
+      tried[preferred[i]] = 1;
+      var s = tryDecode(LZ, localStorage.getItem(preferred[i]));
+      if (s) { foundKey = preferred[i]; return s; }
+    }
+    lastKeys = [];
     for (var j = 0; j < localStorage.length; j++) {
       var key = localStorage.key(j);
-      var val = localStorage.getItem(key);
-      var decoded = tryDecode(LZ, val);
-      if (decoded) return decoded;
+      lastKeys.push(key);
+      if (tried[key]) continue;
+      var decoded = tryDecode(LZ, localStorage.getItem(key));
+      if (decoded) { foundKey = key; return decoded; }
     }
     return null;
   }
@@ -291,10 +324,16 @@
   // ---- UI -----------------------------------------------------------------
 
   var STYLE = [
-    '#adv-panel{position:fixed;right:12px;bottom:12px;z-index:99999;width:320px;max-width:calc(100vw - 24px);',
+    // Docked bottom-right, but lifted above the game's fixed bottom nav bar.
+    // --adv-lift is the clearance; tweak once if your nav is taller/shorter.
+    ':root{--adv-lift:64px}',
+    '#adv-panel{position:fixed;right:10px;bottom:calc(var(--adv-lift) + env(safe-area-inset-bottom,0px));',
+      'z-index:99999;width:300px;max-width:calc(100vw - 20px);',
       'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e6edf3;',
-      'background:rgba(16,20,24,.96);border:1px solid #2a333b;border-radius:10px;',
-      'box-shadow:0 8px 28px rgba(0,0,0,.5);backdrop-filter:blur(4px);overflow:hidden}',
+      'background:rgba(16,20,24,.97);border:1px solid #2a333b;border-radius:10px;',
+      'box-shadow:0 8px 28px rgba(0,0,0,.55);backdrop-filter:blur(4px);overflow:hidden}',
+    // When collapsed, shrink to just the header bar and hug the corner tighter.
+    '#adv-panel.collapsed{width:auto}',
     '#adv-head{display:flex;align-items:center;gap:.5rem;padding:.55rem .7rem;cursor:pointer;',
       'background:linear-gradient(180deg,#141a1f,#0f1418);border-bottom:1px solid #2a333b;user-select:none}',
     '#adv-head .dot{width:8px;height:8px;border-radius:50%;background:#1abc9c;box-shadow:0 0 8px #1abc9c}',
@@ -375,8 +414,13 @@
 
     var save = loadSave();
     if (!save) {
-      body.innerHTML = '<div class="adv-card warn"><p class="t">No save found</p>' +
-        '<p class="d">Couldn\u2019t read the game save from storage. Play a moment so the game writes a save, then hit Refresh.</p></div>';
+      var keyList = lastKeys.length ? lastKeys.join(', ') : '(none)';
+      var lzMsg = getLZ() ? '' : ' LZString isn\u2019t loaded yet — make sure advisor.js loads AFTER the game scripts.';
+      body.innerHTML = '<div class="adv-card warn"><p class="t">No save found yet</p>' +
+        '<p class="d">Couldn\u2019t decode a game save from storage.' + lzMsg +
+        ' The game may not have written one yet — play a few seconds, then Refresh.</p></div>' +
+        '<div class="adv-card info"><p class="t">Storage keys seen</p>' +
+        '<p class="d">' + esc(keyList) + '</p></div>';
       countEl.textContent = '!';
       if (statusEl) statusEl.textContent = 'no save';
       return;
