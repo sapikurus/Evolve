@@ -143,6 +143,23 @@
     tips.push({ sev: 'info', title: 'Maximize each reset\u2019s payout',
       detail: 'Prestige currency scales with population AND total Knowledge spent on research \u2014 Knowledge weighs more. Before any reset, buy every affordable tech so your spent-Knowledge is as high as possible.' });
 
+    // Plasmid spending / CRISPR guidance, driven by the live Plasmid count.
+    // Community rule: hold ~250 Plasmids for the production bonus (diminishing
+    // returns past that); spend only the surplus above 250 in CRISPR on
+    // permanent traits. CRISPR unlocks after Genome Sequencing (ARPA+Genetics).
+    var PLASMID_HOLD = 250;
+    if (s.plasmid > 0) {
+      if (s.plasmid < PLASMID_HOLD) {
+        tips.push({ sev: 'info', title: 'Don\u2019t spend Plasmids yet (' + s.plasmid + '/' + PLASMID_HOLD + ')',
+          detail: 'Every Plasmid is currently boosting all production. The community rule is to hold ~' + PLASMID_HOLD +
+            ' before spending any in CRISPR. Keep MAD-resetting to grow the stockpile \u2014 don\u2019t dip below the bonus.' });
+      } else {
+        var surplus = s.plasmid - PLASMID_HOLD;
+        tips.push({ sev: 'good', title: 'Surplus Plasmids ready to spend (' + surplus + ' over ' + PLASMID_HOLD + ')',
+          detail: 'You\u2019re past the ~' + PLASMID_HOLD + ' hold point, where the production bonus hits diminishing returns. Spend the surplus in CRISPR (ARPA tab) on PERMANENT traits that carry across all resets. Favor cost-reductions and prestige-gain boosts that speed the START of every future run over one-off conveniences. Keep ~' + PLASMID_HOLD + ' banked for the bonus.' });
+      }
+    }
+
     // Live nudge from current save.
     var kn = save.resource && save.resource.Knowledge;
     if (kn && kn.max > 0 && kn.amount / kn.max >= CAP_PCT) {

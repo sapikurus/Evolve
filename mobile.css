@@ -567,21 +567,60 @@
         position: static !important;
     }
 
+    /* Fixed-position guard: a CSS transform/filter/perspective on any
+       ancestor turns it into the containing block for position:fixed,
+       which would make the top bar / queue / nav scroll away on that tab
+       (this is why Civics — whose panes/animation wrappers may set a
+       transform — broke while others worked). Neutralize transforms on the
+       game's structural wrappers so fixed stays viewport-relative. */
+    #mainColumn,
+    #mainColumn > .b-tabs,
+    #mainColumn > .b-tabs > section,
+    #mainColumn .tab-content,
+    #civics,
+    .main .civics,
+    #mainTabs,
+    #mainTabs > .b-tabs {
+        transform: none !important;
+        filter: none !important;
+        perspective: none !important;
+    }
+
     /* (5) Storage tab: kill the huge fixed left margins that waste width
        on Aluminium/Titanium rows. evolve.css sets
          .storage-header .crate { margin-left: 13rem }
          .storage-header .container { margin-left: 3rem }
          .storage > div { width: 50% }
-       which overflow on a phone. Make them flow instead. */
+       which overflow on a phone. Make them flow instead, tightly, so the
+       resource name + Crate + Container controls all fit on one row. */
     .main .storage {
         flex-wrap: wrap;
-        gap: .25rem .5rem;
+        gap: .15rem .3rem;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
     }
-    .main .storage > div { width: auto !important; flex: 1 1 auto; min-width: 0; }
+    .main .storage > div {
+        width: auto !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
     .main .storage-header .crate,
     .main .storage-header .container {
-        margin-left: 1rem !important;   /* was 13rem / 3rem */
+        margin-left: .5rem !important;   /* was 13rem / 3rem */
     }
-    .main .storage .control { margin-right: .5rem !important; }
+    .main .storage .control {
+        margin-right: .3rem !important;
+        margin-left: 0 !important;
+    }
+    /* Pull the whole storage/content column hard left to reclaim the gutter
+       so long names (Aluminium) don't wrap onto their own line. */
     .main > .columns > #mainColumn { padding-left: 0 !important; margin-left: 0 !important; }
+    .main .content .tab-content,
+    .main .content > .tab-content { padding-left: 0 !important; margin-left: 0 !important; }
+    /* the crate/container stepper buttons: keep them compact on this tab */
+    .main .storage .add,
+    .main .storage .sub { padding: 0 .4rem !important; margin: 0 .05rem !important; }
+    .main .storage .current { min-width: 2.2rem !important; }
 }
