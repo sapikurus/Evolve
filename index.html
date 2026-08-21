@@ -3,6 +3,9 @@
 <head>
     <title>Evolve</title>
     <meta http-equiv="Content-type" content="text/html;charset=utf-8">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e2327">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" href="evolved-light.ico" type="images/x-icon" media="(prefers-color-scheme:dark)">
     <link rel="icon" href="evolved.ico" type="images/x-icon" media="(prefers-color-scheme:light)">
@@ -63,6 +66,14 @@
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'G-CPC46V71CB');
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
     </script>
 </body>
 </html>
