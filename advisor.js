@@ -81,6 +81,79 @@
   function pretty(k) { return String(k).replace(/_/g, '-'); }
 
   // ======================================================================
+  // PROGRESSION TIPS  (community-grounded, save-aware)
+  // Sourced from the Evolve beginner's guide (wooledge.org) and the
+  // Fandom wiki "311 Rule": 3 MAD resets, then 1 Bioseed, then 1 Black
+  // Hole, then MAD again for Plasmids as needed. Tips fire based on which
+  // prestige currencies and structures the save shows.
+  // ======================================================================
+  function detectStage(save) {
+    // Prestige currencies live in save.prestige[X].count.
+    var p = save.prestige || {};
+    var pc = function (k) { return (p[k] && p[k].count) || 0; };
+    // Reset counters live in save.stats — the ground truth for the 311 rule.
+    var st = save.stats || {};
+    var plasmid = pc('Plasmid');
+    var phage = pc('Phage');
+    var dark = pc('Dark');
+    return {
+      plasmid: plasmid, phage: phage, dark: dark,
+      harmony: pc('Harmony'), artifact: pc('Artifact'),
+      madCount: st.mad || 0,
+      bioseedCount: st.bioseed || 0,
+      blackholeCount: st.blackhole || 0,
+      totalResets: st.reset || 0,
+      ascendCount: st.ascend || 0,
+      hasMAD: plasmid > 0 || (st.mad || 0) > 0
+    };
+  }
+
+  function progressionTips(save) {
+    var tips = [];
+    var s = detectStage(save);
+
+    // Where are you in the 311 rule? Use real reset counters.
+    var stageLine = 'Resets so far \u2014 MAD: ' + s.madCount + ', Bioseed: ' +
+      s.bioseedCount + ', Black Hole: ' + s.blackholeCount +
+      '. Plasmids: ' + s.plasmid + (s.phage ? ', Phage: ' + s.phage : '') + '.';
+    tips.push({ sev: 'good', title: 'Your progress (311 rule)', detail: stageLine });
+
+    // Decide the next recommended milestone from the counters.
+    if (s.blackholeCount > 0) {
+      tips.push({ sev: 'info', title: 'Endgame \u2014 your call now',
+        detail: 'You\u2019ve done a Black Hole reset, so the beginner 311 path is complete. From here it\u2019s Whitehole/Vacuum, Ascension, or challenge universes \u2014 pick based on the achievements/perks you\u2019re chasing.' });
+    } else if (s.bioseedCount > 0) {
+      tips.push({ sev: 'info', title: 'Next: Black Hole reset',
+        detail: 'You\u2019ve Bioseeded (' + s.bioseedCount + '\u00d7). Push interstellar: research Stellar Engine, build all 100 segments, add a Mass Ejector, and feed it mass until the Black Hole reset unlocks. First one can take real-life days \u2014 that\u2019s normal.' });
+    } else if (s.madCount >= 3) {
+      tips.push({ sev: 'info', title: 'Next: go for Bioseed',
+        detail: 'You\u2019ve done ' + s.madCount + ' MAD resets \u2014 the 311 rule says it\u2019s time for your first Bioseed. Research toward the Genesis Ship (needs Supercollider/ARPA techs), build the Space Dock + Bioseeder (100 segments), and add as many Probes as possible \u2014 each Probe = one more planet choice next run.' });
+    } else if (s.madCount > 0) {
+      tips.push({ sev: 'info', title: 'Keep MAD-resetting (' + s.madCount + '/3)',
+        detail: 'The 311 rule suggests ~3 MAD resets before Bioseed. Each is quick and stacks Plasmids that boost all production. Do ' + (3 - s.madCount) + ' more, teching a bit further each run, before the long Bioseed build.' });
+    } else if (s.plasmid > 0) {
+      tips.push({ sev: 'info', title: 'MAD is unlocked \u2014 use it',
+        detail: 'You have Plasmids but the counter shows no MAD reset yet. Once you\u2019ve teched comfortably past your last wall, pull the MAD trigger \u2014 Plasmids permanently speed every future run.' });
+    } else {
+      tips.push({ sev: 'info', title: 'First goal: unlock MAD',
+        detail: 'Research toward Mutual Assured Destruction. Your first MAD reset grants Plasmids, which permanently speed every future run. Don\u2019t over-invest before that first reset.' });
+    }
+
+    // Universal payout tip.
+    tips.push({ sev: 'info', title: 'Maximize each reset\u2019s payout',
+      detail: 'Prestige currency scales with population AND total Knowledge spent on research \u2014 Knowledge weighs more. Before any reset, buy every affordable tech so your spent-Knowledge is as high as possible.' });
+
+    // Live nudge from current save.
+    var kn = save.resource && save.resource.Knowledge;
+    if (kn && kn.max > 0 && kn.amount / kn.max >= CAP_PCT) {
+      tips.push({ sev: 'warn', title: 'Raise your Knowledge cap',
+        detail: 'Knowledge is capped right now, throttling how fast you tech toward the next reset. Build Libraries / Wardenclyffe / Bioscience Labs \u2014 higher cap = faster progression and a bigger reset payout.' });
+    }
+
+    return tips;
+  }
+
+  // ======================================================================
   // SAVE LOADING (robust)
   // ======================================================================
   function getLZ() { return window.LZString || window.LZ || window.lzString || null; }
@@ -350,7 +423,18 @@
       'border:1px solid #2a333b;border-radius:5px;background:#12181d}',
     '#adv-wiki a:hover{color:#63d6bd;border-color:#1abc9c}',
     '#adv-wiki .book{color:#6b7885;font-size:.68rem;margin-right:.1rem}',
-    '#adv-panel.collapsed #adv-wiki{display:none}'
+    '#adv-panel.collapsed #adv-wiki{display:none}',
+    // wiki overlay
+    '#adv-wiki-overlay{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;',
+      'background:#0f1418}',
+    '#adv-wiki-bar{display:flex;align-items:center;justify-content:space-between;',
+      'padding:.5rem .8rem;background:#141a1f;border-bottom:1px solid #2a333b;color:#e6edf3;',
+      'font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:.9rem;font-weight:700;',
+      'padding-top:calc(.5rem + env(safe-area-inset-top,0px))}',
+    '#adv-wiki-close{background:#1f272e;color:#e6edf3;border:1px solid #2a333b;border-radius:6px;',
+      'font-size:.85rem;padding:.35rem .8rem;cursor:pointer;font-weight:700}',
+    '#adv-wiki-close:active{transform:translateY(1px)}',
+    '#adv-wiki-frame{flex:1;width:100%;border:0;background:#fff}'
   ].join('');
 
   var activeTab = 'alerts';
@@ -370,17 +454,27 @@
         '<span class="count" id="adv-count">0</span><span class="chev">\u25BC</span></div>' +
       '<div id="adv-tabs">' +
         '<div class="adv-tab active" data-tab="alerts">Alerts</div>' +
-        '<div class="adv-tab" data-tab="chain">Chain</div></div>' +
+        '<div class="adv-tab" data-tab="chain">Chain</div>' +
+        '<div class="adv-tab" data-tab="guide">Guide</div></div>' +
       '<div id="adv-body"></div>' +
       '<div id="adv-foot"><span class="left"><span id="adv-status">reading\u2026</span></span>' +
         '<button id="adv-refresh">Refresh</button></div>' +
       '<div id="adv-wiki"><span class="book">\uD83D\uDCD6</span>' +
-        '<a href="' + WIKI_URL + '" target="_blank" rel="noopener">Wiki</a>' +
-        '<a href="' + WIKI_URL + '#mechanics-basics" target="_blank" rel="noopener">Mechanics</a>' +
-        '<a href="' + WIKI_URL + '#resources-market" target="_blank" rel="noopener">Resources</a>' +
-        '<a href="' + WIKI_URL + '#resets-mad" target="_blank" rel="noopener">Resets</a>' +
+        '<a data-hash="">Wiki</a>' +
+        '<a data-hash="#mechanics-basics">Mechanics</a>' +
+        '<a data-hash="#resources-market">Resources</a>' +
+        '<a data-hash="#resets-mad">Resets</a>' +
       '</div>';
     document.body.appendChild(p);
+
+    // Wiki opens in an in-app overlay (iframe) with a close button, so the
+    // PWA never navigates away and you return exactly where you were.
+    Array.prototype.forEach.call(p.querySelectorAll('#adv-wiki a'), function (a) {
+      a.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openWiki(a.getAttribute('data-hash') || '');
+      });
+    });
 
     p.querySelector('#adv-head').addEventListener('click', function () {
       p.classList.toggle('collapsed');
@@ -440,6 +534,20 @@
     }).join('');
   }
 
+  function renderGuide(save, body, countEl) {
+    var tips = progressionTips(save);
+    var actionable = tips.filter(function (t) { return t.sev === 'warn'; }).length;
+    countEl.textContent = actionable || tips.length;
+    countEl.style.background = actionable ? '#3a1f1f' : '#1f272e';
+    countEl.style.color = actionable ? '#ff8b84' : '#8fa1b3';
+    body.innerHTML = tips.map(function (c) {
+      return '<div class="adv-card ' + c.sev + '"><p class="t">' + esc(c.title) +
+        '</p><p class="d">' + esc(c.detail) + '</p></div>';
+    }).join('') +
+    '<div class="adv-card info"><p class="t">More detail</p><p class="d">' +
+      'Tap a wiki link below for the full mechanics. These tips are grounded in the community beginner\u2019s guide, adapted to your current save stage.</p></div>';
+  }
+
   function render() {
     var body = document.getElementById('adv-body');
     var countEl = document.getElementById('adv-count');
@@ -459,6 +567,7 @@
     }
 
     if (activeTab === 'chain') renderChain(save, body, countEl);
+    else if (activeTab === 'guide') renderGuide(save, body, countEl);
     else renderAlerts(save, body, countEl);
 
     if (statusEl) {
@@ -466,6 +575,34 @@
       var race = save.race && save.race.species ? ' \u00b7 ' + save.race.species : '';
       statusEl.textContent = 'updated ' + new Date().toLocaleTimeString() + (ver ? ' \u00b7 ' + ver : '') + race;
     }
+  }
+
+  // In-app wiki overlay: loads wiki.html in an iframe layer over the game.
+  function openWiki(hash) {
+    var existing = document.getElementById('adv-wiki-overlay');
+    if (existing) existing.parentNode.removeChild(existing);
+    var ov = document.createElement('div');
+    ov.id = 'adv-wiki-overlay';
+    ov.innerHTML =
+      '<div id="adv-wiki-bar">' +
+        '<span id="adv-wiki-title">\uD83D\uDCD6 Evolve Wiki</span>' +
+        '<button id="adv-wiki-close">\u2715 Close</button>' +
+      '</div>' +
+      '<iframe id="adv-wiki-frame" src="' + WIKI_URL + hash + '" ' +
+        'referrerpolicy="no-referrer"></iframe>';
+    document.body.appendChild(ov);
+    document.getElementById('adv-wiki-close').addEventListener('click', closeWiki);
+    // Android hardware back / gesture: intercept to close overlay first.
+    try {
+      history.pushState({ advWiki: 1 }, '');
+      window.addEventListener('popstate', wikiPop);
+    } catch (e) {}
+  }
+  function wikiPop() { closeWiki(); }
+  function closeWiki() {
+    var ov = document.getElementById('adv-wiki-overlay');
+    if (ov) ov.parentNode.removeChild(ov);
+    window.removeEventListener('popstate', wikiPop);
   }
 
   function boot() {

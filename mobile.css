@@ -457,4 +457,109 @@
         justify-content: flex-start;
     }
     .promoBar::-webkit-scrollbar { display: none; }
+
+
+    /* ================================================================
+       UI REFINEMENTS (items 1-5). Selectors verified against evolve.css.
+       ================================================================ */
+
+    /* (1) Top bar: more vertical room + build queue sticks under it */
+    .topBar {
+        min-height: 2.1rem;
+        line-height: 1.9rem;
+        padding-top: .15rem;
+        padding-bottom: .15rem;
+    }
+    .main .leftColumn #sideQueue {
+        position: sticky;
+        top: 2.1rem;                 /* == top bar height */
+        z-index: 30;
+        background: var(--px-slot-deep, #1b1d14);
+        padding-bottom: .15rem;
+    }
+    .main .leftColumn #sideQueue #msgQueue { position: static; }
+
+    /* (2) Resources block: distinct border */
+    .main #resources,
+    .main .leftColumn #resources {
+        border: 2px solid var(--px-panel-hi, #585c46);
+        border-radius: 4px;
+        padding: .3rem .35rem;
+        background: rgba(0, 0, 0, .18);
+        box-sizing: border-box;
+    }
+    html.pixel .main #resources {
+        border-radius: 0;
+        border: var(--px-bevel, 3px solid);
+        border-color: var(--px-bevel-down, #22241b #585c46 #585c46 #22241b);
+    }
+
+    /* (3) Craft buttons (+1/+5/+A): boxed, finger-sized.
+       evolve.css renders them as inline `.craftable > span` with only a
+       .25rem margin — tiny and easy to mis-tap. Box them. */
+    .main .resources .resource .craftable {
+        width: auto !important;      /* was 30% */
+        display: flex;
+        justify-content: flex-end;
+        gap: .3rem;
+    }
+    .main .resources .resource .craftable > span {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.2rem;
+        min-height: 2rem;
+        margin: 0 !important;
+        padding: 0 .3rem;
+        border: 2px solid var(--px-panel-hi, #585c46);
+        border-radius: 3px;
+        background: var(--px-slot, #26281e);
+        font-weight: 700;
+        line-height: 1;
+    }
+    .main .resources .resource .craftable > span:active {
+        transform: translateY(1px);
+        background: var(--px-slot-deep, #1b1d14);
+    }
+    html.pixel .main .resources .resource .craftable > span {
+        border-radius: 0;
+        color: var(--px-gold, #e8c14a);
+        text-shadow: 1px 1px 0 #000;
+    }
+    .main .resources .resource:has(.craftable > span) { min-height: 2.3rem; }
+
+    /* (4) Bottom nav fixed on EVERY tab (not just Civilization).
+       skin.css fixes only `#mainTabs > nav.tabs` under html.pixel; make it
+       universal and guard inner tab navs from being fixed too. */
+    #mainTabs > nav.tabs,
+    #mainTabs > .tabs,
+    html.pixel #mainTabs > nav.tabs,
+    html.pixel #mainTabs > .tabs {
+        position: fixed !important;
+        bottom: 0; left: 0; right: 0;
+        z-index: 40;
+    }
+    .main { margin-bottom: 7rem; }
+    #mainTabs .tab-content .b-tabs nav.tabs,
+    #mainTabs .tab-content .b-tabs .tabs {
+        position: static !important;
+    }
+
+    /* (5) Storage tab: kill the huge fixed left margins that waste width
+       on Aluminium/Titanium rows. evolve.css sets
+         .storage-header .crate { margin-left: 13rem }
+         .storage-header .container { margin-left: 3rem }
+         .storage > div { width: 50% }
+       which overflow on a phone. Make them flow instead. */
+    .main .storage {
+        flex-wrap: wrap;
+        gap: .25rem .5rem;
+    }
+    .main .storage > div { width: auto !important; flex: 1 1 auto; min-width: 0; }
+    .main .storage-header .crate,
+    .main .storage-header .container {
+        margin-left: 1rem !important;   /* was 13rem / 3rem */
+    }
+    .main .storage .control { margin-right: .5rem !important; }
+    .main > .columns > #mainColumn { padding-left: 0 !important; margin-left: 0 !important; }
 }
