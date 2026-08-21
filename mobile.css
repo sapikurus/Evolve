@@ -463,21 +463,38 @@
        UI REFINEMENTS (items 1-5). Selectors verified against evolve.css.
        ================================================================ */
 
-    /* (1) Top bar: more vertical room + build queue sticks under it */
+    /* (1) Top bar: more vertical room.  .topBar is already position:fixed
+       in evolve.css (top:0), so we just give it height. */
     .topBar {
-        min-height: 2.1rem;
-        line-height: 1.9rem;
-        padding-top: .15rem;
-        padding-bottom: .15rem;
+        height: auto !important;      /* beat evolve.css's fixed 1.2rem */
+        min-height: 2rem;
+        line-height: 1.85rem;
+        padding-top: .1rem;
+        padding-bottom: .1rem;
+        z-index: 41 !important;       /* above the fixed build queue */
     }
+
+    /* Build queue: FIXED just under the top bar so it stays visible on
+       EVERY tab. The game stacks leftColumn above mainColumn on mobile, so
+       a sticky queue scrolls away once you're deep in a right-column tab.
+       Fixing it to the viewport is the only approach that survives all tabs.
+       (#sideQueue holds the msg banner + build queue.) */
     .main .leftColumn #sideQueue {
-        position: sticky;
-        top: 2.1rem;                 /* == top bar height */
-        z-index: 30;
+        position: fixed;
+        top: 2rem;                    /* == top bar height */
+        left: 0; right: 0;
+        z-index: 39;
+        margin: 0;
+        padding: .1rem .5rem;
         background: var(--px-slot-deep, #1b1d14);
-        padding-bottom: .15rem;
+        border-bottom: 2px solid var(--px-panel-hi, #585c46);
+        max-height: 4.5rem;           /* keep it a compact strip */
+        overflow: hidden;
     }
     .main .leftColumn #sideQueue #msgQueue { position: static; }
+    /* Push everything down so the fixed top bar + queue don't overlap content.
+       Top bar (2rem) + queue strip (~4.5rem) ≈ 6.5rem clearance. */
+    .main { margin-top: 6.75rem !important; }
 
     /* (2) Resources block: distinct border */
     .main #resources,
@@ -529,19 +546,24 @@
     .main .resources .resource:has(.craftable > span) { min-height: 2.3rem; }
 
     /* (4) Bottom nav fixed on EVERY tab (not just Civilization).
-       skin.css fixes only `#mainTabs > nav.tabs` under html.pixel; make it
-       universal and guard inner tab navs from being fixed too. */
+       skin.css fixes only `#mainTabs > nav.tabs` under html.pixel. Buefy may
+       nest the nav one level deeper on some tabs, so we target BOTH the
+       direct child and any descendant nav that is the main tab bar, while
+       still excluding inner sub-tab navs (those live in .tab-content). */
     #mainTabs > nav.tabs,
     #mainTabs > .tabs,
+    #mainTabs > .b-tabs > nav.tabs,
     html.pixel #mainTabs > nav.tabs,
-    html.pixel #mainTabs > .tabs {
+    html.pixel #mainTabs > .tabs,
+    html.pixel #mainTabs > .b-tabs > nav.tabs {
         position: fixed !important;
         bottom: 0; left: 0; right: 0;
         z-index: 40;
     }
     .main { margin-bottom: 7rem; }
-    #mainTabs .tab-content .b-tabs nav.tabs,
-    #mainTabs .tab-content .b-tabs .tabs {
+    /* inner sub-tab navs (Stats, Industry, etc.) must NOT be fixed */
+    #mainTabs .tab-content nav.tabs,
+    #mainTabs .tab-content .tabs {
         position: static !important;
     }
 
