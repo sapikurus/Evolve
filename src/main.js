@@ -885,9 +885,12 @@ gameLoop('start');
 (function offlineProgression(){
     function run(){
       try {
-        if (global.settings && global.settings.pause){ return; }
-        if (!global.stats || !global.stats['current']){ return; }
-        if (global.race && global.race.species === 'protoplasm'){ return; }
+        // DEBUG: announce that the catch-up code is executing at all.
+        try { messageQueue('[offline] checking… s=' + webWorker.s, 'info', false, ['progress']); } catch(e){}
+
+        if (global.settings && global.settings.pause){ try{messageQueue('[offline] skipped: game paused','warning',false,['progress']);}catch(e){} return; }
+        if (!global.stats || !global.stats['current']){ try{messageQueue('[offline] skipped: no timestamp','warning',false,['progress']);}catch(e){} return; }
+        if (global.race && global.race.species === 'protoplasm'){ try{messageQueue('[offline] skipped: protoplasm','warning',false,['progress']);}catch(e){} return; }
 
         const CAP_HOURS = 12;
         const MAX_OFFLINE_MS = CAP_HOURS * 60 * 60 * 1000;
@@ -896,7 +899,8 @@ gameLoop('start');
         const now = Date.now();
         const last = global.stats['current'];
         let elapsedMs = now - last;
-        if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ return; }
+        try { messageQueue('[offline] elapsed = ' + Math.round(elapsedMs/1000) + 's', 'info', false, ['progress']); } catch(e){}
+        if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ try{messageQueue('[offline] skipped: gap under 10s','warning',false,['progress']);}catch(e){} return; }
         const wasCapped = elapsedMs > MAX_OFFLINE_MS;
         if (wasCapped){ elapsedMs = MAX_OFFLINE_MS; }
 
@@ -971,12 +975,12 @@ gameLoop('start');
     // completes. Poll briefly for that rather than a blind wait.
     var tries = 0;
     (function waitReady(){
-        // Ready when the worker has signalled (s true) OR after a short grace
-        // period (we force s=true ourselves anyway; this just lets normal init
-        // settle first so we don't fight the first real loop).
-        if (webWorker.s || tries >= 20){ run(); return; }
+        if (webWorker.s || tries >= 20){
+            if (!webWorker.s){ try{ messageQueue('[offline] worker never ready after 2s, running anyway','info',false,['progress']); }catch(e){} }
+            run(); return;
+        }
         tries++;
-        setTimeout(waitReady, 100);   // up to ~2s, usually far less
+        setTimeout(waitReady, 100);
     })();
 })();
 // ==== END INSTANT OFFLINE PROGRESSION ===================================
