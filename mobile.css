@@ -4,7 +4,7 @@
 
     /* ---------- Global ---------- */
     html {
-        font-size: 13px !important; /* compact: fit more components per screen */
+        font-size: 11px !important; /* compact: fit more components per screen (was 13px — smaller = less chunky pixel theme) */
     }
     html {
         /* The game sets html{overflow-y:hidden} (desktop design: every pane
@@ -586,41 +586,59 @@
         perspective: none !important;
     }
 
-    /* (5) Storage tab: kill the huge fixed left margins that waste width
-       on Aluminium/Titanium rows. evolve.css sets
-         .storage-header .crate { margin-left: 13rem }
-         .storage-header .container { margin-left: 3rem }
-         .storage > div { width: 50% }
-       which overflow on a phone. Make them flow instead, tightly, so the
-       resource name + Crate + Container controls all fit on one row. */
+    /* (5) Storage tab: the game makes each row  .storage{display:flex}  with
+       two  >div{width:50%}  halves (Crate group | Container group), and the
+       resource NAME sits inside the first half. Long names (ALUMINIUM) can't
+       fit "NAME Crate − 0 +" in 50%, so the row wraps and the steppers vanish.
+       Fix: never wrap; give the name a fixed narrow slot that truncates; let
+       the two control halves share the rest equally. */
     .main .storage {
-        flex-wrap: wrap;
-        gap: .15rem .3rem;
+        flex-wrap: nowrap !important;   /* THE fix — was wrapping on Aluminium */
+        align-items: center;
+        gap: .2rem;
         margin-left: 0 !important;
         padding-left: 0 !important;
+        width: 100%;
     }
     .main .storage > div {
-        width: auto !important;
-        flex: 1 1 auto;
-        min-width: 0;
+        width: 50% !important;          /* equal halves again, but no-wrap */
+        flex: 1 1 50%;
+        min-width: 0;                   /* allow shrink so children can truncate */
         margin-left: 0 !important;
         padding-left: 0 !important;
+        display: flex;
+        align-items: center;
+        gap: .15rem;
+    }
+    /* The resource name label: fixed small slot, truncate if needed, so it
+       never pushes the Crate/Container steppers off the row. Targets the
+       text node wrapper — in these rows the name is the first inline span. */
+    .main .storage > div > span:first-child,
+    .main .storage .res-name,
+    .main .storage .label {
+        display: inline-block;
+        width: 4.2rem;
+        min-width: 4.2rem;
+        max-width: 4.2rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: .8rem;
     }
     .main .storage-header .crate,
     .main .storage-header .container {
-        margin-left: .5rem !important;   /* was 13rem / 3rem */
+        margin-left: .5rem !important;  /* was 13rem / 3rem */
     }
     .main .storage .control {
-        margin-right: .3rem !important;
+        margin-right: .2rem !important;
         margin-left: 0 !important;
     }
-    /* Pull the whole storage/content column hard left to reclaim the gutter
-       so long names (Aluminium) don't wrap onto their own line. */
+    /* compact steppers so both Crate and Container groups fit */
+    .main .storage .add,
+    .main .storage .sub { padding: 0 .35rem !important; margin: 0 .04rem !important; }
+    .main .storage .current { min-width: 1.9rem !important; padding: 0 .1rem !important; }
+    /* reclaim the content gutter */
     .main > .columns > #mainColumn { padding-left: 0 !important; margin-left: 0 !important; }
     .main .content .tab-content,
     .main .content > .tab-content { padding-left: 0 !important; margin-left: 0 !important; }
-    /* the crate/container stepper buttons: keep them compact on this tab */
-    .main .storage .add,
-    .main .storage .sub { padding: 0 .4rem !important; margin: 0 .05rem !important; }
-    .main .storage .current { min-width: 2.2rem !important; }
 }
