@@ -890,12 +890,9 @@ gameLoop('start');
 (function offlineProgression(){
     function run(){
       try {
-        // DEBUG: announce that the catch-up code is executing at all.
-        try { messageQueue('[offline] checking… s=' + webWorker.s, 'info', false, ['progress']); } catch(e){}
-
-        if (global.settings && global.settings.pause){ try{messageQueue('[offline] skipped: game paused','warning',false,['progress']);}catch(e){} return; }
-        if (!global.stats || !global.stats['current']){ try{messageQueue('[offline] skipped: no timestamp','warning',false,['progress']);}catch(e){} return; }
-        if (global.race && global.race.species === 'protoplasm'){ try{messageQueue('[offline] skipped: protoplasm','warning',false,['progress']);}catch(e){} return; }
+        if (global.settings && global.settings.pause){ return; }
+        if (!global.stats || !global.stats['current']){ return; }
+        if (global.race && global.race.species === 'protoplasm'){ return; }
 
         const CAP_HOURS = 12;
         const MAX_OFFLINE_MS = CAP_HOURS * 60 * 60 * 1000;
@@ -903,10 +900,9 @@ gameLoop('start');
 
         const now = Date.now();
         const last = __offlineLastActive;   // captured at module load, pre-overwrite
-        if (!last){ try{messageQueue('[offline] skipped: no captured timestamp','warning',false,['progress']);}catch(e){} return; }
+        if (!last){ return; }
         let elapsedMs = now - last;
-        try { messageQueue('[offline] elapsed = ' + Math.round(elapsedMs/1000) + 's', 'info', false, ['progress']); } catch(e){}
-        if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ try{messageQueue('[offline] skipped: gap under 10s','warning',false,['progress']);}catch(e){} return; }
+        if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ return; }
         const wasCapped = elapsedMs > MAX_OFFLINE_MS;
         if (wasCapped){ elapsedMs = MAX_OFFLINE_MS; }
 
@@ -933,13 +929,18 @@ gameLoop('start');
         try { messageQueue('Calculating ' + human + (wasCapped ? ' (capped ' + CAP_HOURS + 'h)' : '') + ' offline…', 'caution', false, ['progress']); } catch(e){}
 
         // execGameLoops caps each call at longRatio*12. Use EXACTLY that as our
-        // chunk, so what we subtract equals what actually ran (the earlier bug
-        // subtracted more than execGameLoops simulated -> huge under-run).
+        // chunk, so what we subtract equals what actually ran.
         const chunkCap = longRatio * 12;
         let remaining = totalPeriods;
         let lastPctShown = -1;
 
+        // Fast-forward flag: makes fastLoop skip its heavy per-tick DOM redraws
+        // (craft labels etc.) during catch-up. Massive speedup — the UI is
+        // refreshed once at the end anyway.
+        window.__offlineFF = true;
+
         function finish(){
+            window.__offlineFF = false;
             const gains = [];
             trackList.forEach(function(r){
                 if (global.resource[r] && before.hasOwnProperty(r)){
@@ -957,12 +958,15 @@ gameLoop('start');
 
         function step(){
             if (remaining <= 0){ finish(); return; }
-            const want = Math.min(remaining, chunkCap);
-            // Force the run flag TRUE right before each call — execGameLoops needs
-            // it, and the worker may flip it. execGameLoops caps to chunkCap anyway.
-            webWorker.s = true;
-            execGameLoops(want);
-            remaining -= want;   // want <= chunkCap == execGameLoops' own cap, so accurate
+            // With UI skipped we can run several engine-caps per frame before
+            // yielding — far fewer setTimeout hops = much faster catch-up.
+            var batches = 8;
+            while (batches-- > 0 && remaining > 0){
+                const want = Math.min(remaining, chunkCap);
+                webWorker.s = true;
+                execGameLoops(want);
+                remaining -= want;
+            }
             if (totalPeriods > chunkCap * 5){
                 const pct = Math.floor((1 - remaining/totalPeriods) * 100);
                 if (pct >= lastPctShown + 10){
@@ -973,18 +977,13 @@ gameLoop('start');
             setTimeout(step, 0);
         }
         setTimeout(step, 0);
-      } catch (err){ console.error('Offline progression failed:', err); }
+      } catch (err){ window.__offlineFF = false; console.error('Offline progression failed:', err); }
     }
-    // Values confirmed from vars.js: webWorker = {s:false, mt:250, midRatio:4,
-    // longRatio:20}. Ratios are static defaults (available immediately); only
     // webWorker.s is flipped true asynchronously once the worker handshake
-    // completes. Poll briefly for that rather than a blind wait.
+    // completes. Poll briefly for that, then run.
     var tries = 0;
     (function waitReady(){
-        if (webWorker.s || tries >= 20){
-            if (!webWorker.s){ try{ messageQueue('[offline] worker never ready after 2s, running anyway','info',false,['progress']); }catch(e){} }
-            run(); return;
-        }
+        if (webWorker.s || tries >= 20){ run(); return; }
         tries++;
         setTimeout(waitReady, 100);
     })();
@@ -996,7 +995,7 @@ resourceAlt();
 var firstRun = true;
 var gene_sequence = global.arpa['sequence'] && global.arpa['sequence']['on'] ? global.arpa.sequence.on : 0;
 function fastLoop(){
-    if (!global.race['no_craft']){
+    if (!global.race['no_craft'] && !window.__offlineFF){
         $('.craft').each(function(e){
             if (typeof $(this).data('val') === 'number'){
                 $(this).html(sizeApproximation($(this).data('val') * keyMultiplier(),1));
