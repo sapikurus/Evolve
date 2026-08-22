@@ -451,7 +451,10 @@
     '#adv-wiki-close{background:#1f272e;color:#e6edf3;border:1px solid #2a333b;border-radius:6px;',
       'font-size:.85rem;padding:.35rem .8rem;cursor:pointer;font-weight:700}',
     '#adv-wiki-close:active{transform:translateY(1px)}',
-    '#adv-wiki-frame{flex:1;width:100%;border:0;background:#fff}'
+    '#adv-wiki-frame{flex:1;width:100%;border:0;background:#fff}',
+    // The wiki is a desktop-width page; render it wider then scale to fit so it
+    // isn\u2019t cut off. 1.4x width @ ~71% scale ≈ fits a phone without h-scroll.
+    '#adv-wiki-frame.scaled{width:143%;height:143%;transform:scale(.7);transform-origin:top left}'
   ].join('');
 
   var activeTab = 'alerts';
@@ -605,7 +608,7 @@
         '<span id="adv-wiki-title">\uD83D\uDCD6 Evolve Wiki</span>' +
         '<button id="adv-wiki-close">\u2715 Close</button>' +
       '</div>' +
-      '<iframe id="adv-wiki-frame" src="' + WIKI_URL + hash + '" ' +
+      '<iframe id="adv-wiki-frame" class="scaled" src="' + WIKI_URL + hash + '" ' +
         'referrerpolicy="no-referrer"></iframe>';
     document.body.appendChild(ov);
     document.getElementById('adv-wiki-close').addEventListener('click', closeWiki);

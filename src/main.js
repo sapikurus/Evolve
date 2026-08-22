@@ -876,69 +876,60 @@ if (window.Worker){
 gameLoop('start');
 
 // ==== INSTANT OFFLINE PROGRESSION (custom) ==============================
-// Evolve only advances while running in the foreground; closed/suspended =
-// frozen. It banks time-away as "accelerated time" (2x, paid out only while
-// you watch), which doesn't suit open-glance-close mobile play. This instead
-// simulates the offline window immediately on load using the engine's own
-// execGameLoops(), asynchronously (with a progress toast) and capped at 12h.
+// Simulates time-away on load using the engine's own execGameLoops().
+// NOTE: execGameLoops internally caps each call to (longRatio*12) periods and
+// only runs while webWorker.s is true. The worker sets longRatio/midRatio/mt/s
+// asynchronously, so we (a) provide fallbacks, (b) force webWorker.s=true during
+// catch-up, (c) never subtract more than actually ran, and (d) defer startup
+// briefly so the worker has posted its first message.
 (function offlineProgression(){
-    try {
+    function run(){
+      try {
         if (global.settings && global.settings.pause){ return; }
         if (!global.stats || !global.stats['current']){ return; }
         if (global.race && global.race.species === 'protoplasm'){ return; }
 
-        const CAP_HOURS = 12;                       // offline cap
+        const CAP_HOURS = 12;
         const MAX_OFFLINE_MS = CAP_HOURS * 60 * 60 * 1000;
-        const MIN_OFFLINE_MS = 10000;               // ignore <10s (normal reloads)
+        const MIN_OFFLINE_MS = 10000;
 
         const now = Date.now();
         const last = global.stats['current'];
         let elapsedMs = now - last;
         if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ return; }
-
         const wasCapped = elapsedMs > MAX_OFFLINE_MS;
         if (wasCapped){ elapsedMs = MAX_OFFLINE_MS; }
 
-        // Real ms per fastLoop period (accounts for race speed + accel).
-        const timers = loopTimers();
+        // Fallbacks in case the worker hasn't populated these yet.
+        const longRatio = (webWorker.longRatio && webWorker.longRatio > 0) ? webWorker.longRatio : 20;
+        const timers = (typeof loopTimers === 'function') ? loopTimers() : null;
         const perMs = (timers && timers.mainTimer) ? timers.mainTimer : 250;
         let totalPeriods = Math.floor(elapsedMs / perMs);
         if (totalPeriods < 1){ return; }
 
-        // Cancel the built-in accelerated-time banking so we don't double-count
-        // (addATime ran inside gameLoop('start') just above).
+        // Cancel built-in accelerated-time banking (addATime ran in gameLoop start).
         global.settings.at = 0;
         atrack.t = 0;
-        global.stats.current = now;                 // don't let this window re-bank
+        global.stats.current = now;
 
-        // Snapshot key resources so we can show what was gained.
         const trackList = ['Money','Knowledge','Food','Lumber','Stone','Furs',
             'Copper','Iron','Aluminium','Cement','Coal','Oil','Steel','Titanium',
             'Alloy','Polymer'];
         const before = {};
-        trackList.forEach(function(r){
-            if (global.resource[r]){ before[r] = global.resource[r].amount || 0; }
-        });
+        trackList.forEach(function(r){ if (global.resource[r]){ before[r] = global.resource[r].amount || 0; } });
 
-        // Human-readable duration.
         const secs = Math.floor(elapsedMs/1000), mins = Math.floor(secs/60), hrs = Math.floor(mins/60);
         const human = hrs > 0 ? (hrs + 'h ' + (mins%60) + 'm') : (mins + 'm ' + (secs%60) + 's');
+        try { messageQueue('Calculating ' + human + (wasCapped ? ' (capped ' + CAP_HOURS + 'h)' : '') + ' offline…', 'caution', false, ['progress']); } catch(e){}
 
-        messageQueue('Calculating ' + human + (wasCapped ? ' (capped at ' + CAP_HOURS + 'h)' : '') + ' of offline progress…', 'caution', false, ['progress']);
-
-        // ---- async chunked simulation ----
-        const prevS = webWorker.s;
-        webWorker.s = true;
-        // Scale chunk size with total work: small absences stay smooth, big ones
-        // don't drown in setTimeout overhead. ~1 min game-time minimum.
-        const baseChunk = webWorker.longRatio * 12;         // ~1 min game-time
-        const periodsPerChunk = Math.max(baseChunk, Math.ceil(totalPeriods / 300));
+        // execGameLoops caps each call at longRatio*12. Use EXACTLY that as our
+        // chunk, so what we subtract equals what actually ran (the earlier bug
+        // subtracted more than execGameLoops simulated -> huge under-run).
+        const chunkCap = longRatio * 12;
         let remaining = totalPeriods;
         let lastPctShown = -1;
 
         function finish(){
-            webWorker.s = prevS;
-            // Build a gains summary (top 3 by absolute increase).
             const gains = [];
             trackList.forEach(function(r){
                 if (global.resource[r] && before.hasOwnProperty(r)){
@@ -947,38 +938,46 @@ gameLoop('start');
                 }
             });
             gains.sort(function(a,b){ return b[1]-a[1]; });
-            let summary = 'Welcome back! Applied ' + human + ' of offline progress.';
+            let summary = 'Welcome back! Applied ' + human + ' offline.';
             if (gains.length){
-                const top = gains.slice(0,3).map(function(g){
-                    return g[0] + ' +' + sizeApproximation(g[1],1);
-                }).join(', ');
-                summary += ' Gained: ' + top + '.';
+                summary += ' Gained: ' + gains.slice(0,3).map(function(g){ return g[0] + ' +' + sizeApproximation(g[1],1); }).join(', ') + '.';
             }
-            messageQueue(summary, 'success', false, ['progress']);
-            // Refresh UI now that catch-up is done.
-            try { gameLoop('stop'); gameLoop('start'); } catch(e){}
+            try { messageQueue(summary, 'success', false, ['progress']); } catch(e){}
         }
 
         function step(){
-            if (remaining <= 0 || !webWorker.s){ finish(); return; }
-            const chunk = Math.min(remaining, periodsPerChunk);
-            execGameLoops(chunk);
-            remaining -= chunk;
-            // Show progress every 10% for long catch-ups (skip for short ones).
-            if (totalPeriods > baseChunk * 5){
+            if (remaining <= 0){ finish(); return; }
+            const want = Math.min(remaining, chunkCap);
+            // Force the run flag TRUE right before each call — execGameLoops needs
+            // it, and the worker may flip it. execGameLoops caps to chunkCap anyway.
+            webWorker.s = true;
+            execGameLoops(want);
+            remaining -= want;   // want <= chunkCap == execGameLoops' own cap, so accurate
+            if (totalPeriods > chunkCap * 5){
                 const pct = Math.floor((1 - remaining/totalPeriods) * 100);
                 if (pct >= lastPctShown + 10){
                     lastPctShown = pct - (pct % 10);
-                    messageQueue('Offline catch-up… ' + lastPctShown + '%', 'caution', true, ['progress']);
+                    try { messageQueue('Offline catch-up… ' + lastPctShown + '%', 'caution', true, ['progress']); } catch(e){}
                 }
             }
-            // Yield to the browser between chunks so the UI stays responsive.
             setTimeout(step, 0);
         }
         setTimeout(step, 0);
-    } catch (err){
-        console.error('Offline progression failed:', err);
+      } catch (err){ console.error('Offline progression failed:', err); }
     }
+    // Values confirmed from vars.js: webWorker = {s:false, mt:250, midRatio:4,
+    // longRatio:20}. Ratios are static defaults (available immediately); only
+    // webWorker.s is flipped true asynchronously once the worker handshake
+    // completes. Poll briefly for that rather than a blind wait.
+    var tries = 0;
+    (function waitReady(){
+        // Ready when the worker has signalled (s true) OR after a short grace
+        // period (we force s=true ourselves anyway; this just lets normal init
+        // settle first so we don't fight the first real loop).
+        if (webWorker.s || tries >= 20){ run(); return; }
+        tries++;
+        setTimeout(waitReady, 100);   // up to ~2s, usually far less
+    })();
 })();
 // ==== END INSTANT OFFLINE PROGRESSION ===================================
 
