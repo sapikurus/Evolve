@@ -875,6 +875,113 @@ if (window.Worker){
 }
 gameLoop('start');
 
+// ==== INSTANT OFFLINE PROGRESSION (custom) ==============================
+// Evolve only advances while running in the foreground; closed/suspended =
+// frozen. It banks time-away as "accelerated time" (2x, paid out only while
+// you watch), which doesn't suit open-glance-close mobile play. This instead
+// simulates the offline window immediately on load using the engine's own
+// execGameLoops(), asynchronously (with a progress toast) and capped at 12h.
+(function offlineProgression(){
+    try {
+        if (global.settings && global.settings.pause){ return; }
+        if (!global.stats || !global.stats['current']){ return; }
+        if (global.race && global.race.species === 'protoplasm'){ return; }
+
+        const CAP_HOURS = 12;                       // offline cap
+        const MAX_OFFLINE_MS = CAP_HOURS * 60 * 60 * 1000;
+        const MIN_OFFLINE_MS = 10000;               // ignore <10s (normal reloads)
+
+        const now = Date.now();
+        const last = global.stats['current'];
+        let elapsedMs = now - last;
+        if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ return; }
+
+        const wasCapped = elapsedMs > MAX_OFFLINE_MS;
+        if (wasCapped){ elapsedMs = MAX_OFFLINE_MS; }
+
+        // Real ms per fastLoop period (accounts for race speed + accel).
+        const timers = loopTimers();
+        const perMs = (timers && timers.mainTimer) ? timers.mainTimer : 250;
+        let totalPeriods = Math.floor(elapsedMs / perMs);
+        if (totalPeriods < 1){ return; }
+
+        // Cancel the built-in accelerated-time banking so we don't double-count
+        // (addATime ran inside gameLoop('start') just above).
+        global.settings.at = 0;
+        atrack.t = 0;
+        global.stats.current = now;                 // don't let this window re-bank
+
+        // Snapshot key resources so we can show what was gained.
+        const trackList = ['Money','Knowledge','Food','Lumber','Stone','Furs',
+            'Copper','Iron','Aluminium','Cement','Coal','Oil','Steel','Titanium',
+            'Alloy','Polymer'];
+        const before = {};
+        trackList.forEach(function(r){
+            if (global.resource[r]){ before[r] = global.resource[r].amount || 0; }
+        });
+
+        // Human-readable duration.
+        const secs = Math.floor(elapsedMs/1000), mins = Math.floor(secs/60), hrs = Math.floor(mins/60);
+        const human = hrs > 0 ? (hrs + 'h ' + (mins%60) + 'm') : (mins + 'm ' + (secs%60) + 's');
+
+        messageQueue('Calculating ' + human + (wasCapped ? ' (capped at ' + CAP_HOURS + 'h)' : '') + ' of offline progress…', 'caution', false, ['progress']);
+
+        // ---- async chunked simulation ----
+        const prevS = webWorker.s;
+        webWorker.s = true;
+        // Scale chunk size with total work: small absences stay smooth, big ones
+        // don't drown in setTimeout overhead. ~1 min game-time minimum.
+        const baseChunk = webWorker.longRatio * 12;         // ~1 min game-time
+        const periodsPerChunk = Math.max(baseChunk, Math.ceil(totalPeriods / 300));
+        let remaining = totalPeriods;
+        let lastPctShown = -1;
+
+        function finish(){
+            webWorker.s = prevS;
+            // Build a gains summary (top 3 by absolute increase).
+            const gains = [];
+            trackList.forEach(function(r){
+                if (global.resource[r] && before.hasOwnProperty(r)){
+                    const d = (global.resource[r].amount || 0) - before[r];
+                    if (d > 0){ gains.push([r, d]); }
+                }
+            });
+            gains.sort(function(a,b){ return b[1]-a[1]; });
+            let summary = 'Welcome back! Applied ' + human + ' of offline progress.';
+            if (gains.length){
+                const top = gains.slice(0,3).map(function(g){
+                    return g[0] + ' +' + sizeApproximation(g[1],1);
+                }).join(', ');
+                summary += ' Gained: ' + top + '.';
+            }
+            messageQueue(summary, 'success', false, ['progress']);
+            // Refresh UI now that catch-up is done.
+            try { gameLoop('stop'); gameLoop('start'); } catch(e){}
+        }
+
+        function step(){
+            if (remaining <= 0 || !webWorker.s){ finish(); return; }
+            const chunk = Math.min(remaining, periodsPerChunk);
+            execGameLoops(chunk);
+            remaining -= chunk;
+            // Show progress every 10% for long catch-ups (skip for short ones).
+            if (totalPeriods > baseChunk * 5){
+                const pct = Math.floor((1 - remaining/totalPeriods) * 100);
+                if (pct >= lastPctShown + 10){
+                    lastPctShown = pct - (pct % 10);
+                    messageQueue('Offline catch-up… ' + lastPctShown + '%', 'caution', true, ['progress']);
+                }
+            }
+            // Yield to the browser between chunks so the UI stays responsive.
+            setTimeout(step, 0);
+        }
+        setTimeout(step, 0);
+    } catch (err){
+        console.error('Offline progression failed:', err);
+    }
+})();
+// ==== END INSTANT OFFLINE PROGRESSION ===================================
+
 resourceAlt();
 
 var firstRun = true;
