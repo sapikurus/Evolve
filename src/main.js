@@ -23,6 +23,11 @@ import { setWeather, seasonDesc, astrologySign, astroVal } from './seasons.js';
 import { getTopChange } from './wiki/change.js';
 import { enableDebug, updateDebugData } from './debug.js';
 
+// OFFLINE PROGRESSION: capture the saved last-active timestamp NOW, at module
+// load, before gameLoop('start') and longLoop overwrite global.stats.current
+// with the current time. This is the real "when you last played" value.
+const __offlineLastActive = (global.stats && global.stats['current']) ? global.stats['current'] : 0;
+
 {
     $(document).ready(function() {
         if (!window.matchMedia)
@@ -897,7 +902,8 @@ gameLoop('start');
         const MIN_OFFLINE_MS = 10000;
 
         const now = Date.now();
-        const last = global.stats['current'];
+        const last = __offlineLastActive;   // captured at module load, pre-overwrite
+        if (!last){ try{messageQueue('[offline] skipped: no captured timestamp','warning',false,['progress']);}catch(e){} return; }
         let elapsedMs = now - last;
         try { messageQueue('[offline] elapsed = ' + Math.round(elapsedMs/1000) + 's', 'info', false, ['progress']); } catch(e){}
         if (!(elapsedMs > 0) || elapsedMs < MIN_OFFLINE_MS){ try{messageQueue('[offline] skipped: gap under 10s','warning',false,['progress']);}catch(e){} return; }
