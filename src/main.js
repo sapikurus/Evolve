@@ -958,19 +958,20 @@ gameLoop('start');
 
         function step(){
             if (remaining <= 0){ finish(); return; }
-            // With UI skipped we can run several engine-caps per frame before
-            // yielding — far fewer setTimeout hops = much faster catch-up.
-            var batches = 8;
+            // UI is skipped during fast-forward and we only show a toast, so we
+            // can run MANY engine-caps per frame. ~64 batches * 240 periods =
+            // ~15k periods/frame → a 12h catch-up finishes in ~12 frames.
+            var batches = 64;
             while (batches-- > 0 && remaining > 0){
                 const want = Math.min(remaining, chunkCap);
                 webWorker.s = true;
                 execGameLoops(want);
                 remaining -= want;
             }
-            if (totalPeriods > chunkCap * 5){
+            if (totalPeriods > chunkCap * 2){
                 const pct = Math.floor((1 - remaining/totalPeriods) * 100);
-                if (pct >= lastPctShown + 10){
-                    lastPctShown = pct - (pct % 10);
+                if (pct >= lastPctShown + 5){
+                    lastPctShown = pct - (pct % 5);
                     try { messageQueue('Offline catch-up… ' + lastPctShown + '%', 'caution', true, ['progress']); } catch(e){}
                 }
             }

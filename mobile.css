@@ -4,7 +4,7 @@
 
     /* ---------- Global ---------- */
     html {
-        font-size: 11px !important; /* compact: fit more components per screen (was 13px — smaller = less chunky pixel theme) */
+        font-size: 11px !important; /* compact: fit more components per screen (was 13px) */
     }
     html {
         /* The game sets html{overflow-y:hidden} (desktop design: every pane
@@ -463,37 +463,33 @@
        UI REFINEMENTS (items 1-5). Selectors verified against evolve.css.
        ================================================================ */
 
-    /* (1) Top bar: more vertical room.  .topBar is already position:fixed
-       in evolve.css (top:0), so we just give it height. */
+    /* (1) Top bar: more vertical room + build queue fixed under it.
+       .topBar is already position:fixed in evolve.css (top:0). */
     .topBar {
-        height: auto !important;      /* beat evolve.css's fixed 1.2rem */
+        height: auto !important;
         min-height: 2rem;
         line-height: 1.85rem;
         padding-top: .1rem;
         padding-bottom: .1rem;
-        z-index: 41 !important;       /* above the fixed build queue */
+        z-index: 41 !important;
     }
-
-    /* Build queue: FIXED just under the top bar so it stays visible on
-       EVERY tab. The game stacks leftColumn above mainColumn on mobile, so
-       a sticky queue scrolls away once you're deep in a right-column tab.
-       Fixing it to the viewport is the only approach that survives all tabs.
-       (#sideQueue holds the msg banner + build queue.) */
+    /* Build queue FIXED just under the top bar so it stays visible on every
+       tab (the game stacks leftColumn above mainColumn on mobile, so a sticky
+       queue scrolls away deep in a right-column tab). */
     .main .leftColumn #sideQueue {
         position: fixed;
-        top: 2rem;                    /* == top bar height */
+        top: 2rem;
         left: 0; right: 0;
         z-index: 39;
         margin: 0;
         padding: .1rem .5rem;
         background: var(--px-slot-deep, #1b1d14);
         border-bottom: 2px solid var(--px-panel-hi, #585c46);
-        max-height: 4.5rem;           /* keep it a compact strip */
+        max-height: 4.5rem;
         overflow: hidden;
     }
     .main .leftColumn #sideQueue #msgQueue { position: static; }
-    /* Push everything down so the fixed top bar + queue don't overlap content.
-       Top bar (2rem) + queue strip (~4.5rem) ≈ 6.5rem clearance. */
+    /* clearance so fixed top bar + queue don't overlap content */
     .main { margin-top: 6.75rem !important; }
 
     /* (2) Resources block: distinct border */
@@ -512,10 +508,9 @@
     }
 
     /* (3) Craft buttons (+1/+5/+A): boxed, finger-sized.
-       evolve.css renders them as inline `.craftable > span` with only a
-       .25rem margin — tiny and easy to mis-tap. Box them. */
+       evolve.css renders them as inline `.craftable > span` (tiny). Box them. */
     .main .resources .resource .craftable {
-        width: auto !important;      /* was 30% */
+        width: auto !important;
         display: flex;
         justify-content: flex-end;
         gap: .3rem;
@@ -545,11 +540,7 @@
     }
     .main .resources .resource:has(.craftable > span) { min-height: 2.3rem; }
 
-    /* (4) Bottom nav fixed on EVERY tab (not just Civilization).
-       skin.css fixes only `#mainTabs > nav.tabs` under html.pixel. Buefy may
-       nest the nav one level deeper on some tabs, so we target BOTH the
-       direct child and any descendant nav that is the main tab bar, while
-       still excluding inner sub-tab navs (those live in .tab-content). */
+    /* (4) Bottom nav fixed on EVERY tab (not just Civilization). */
     #mainTabs > nav.tabs,
     #mainTabs > .tabs,
     #mainTabs > .b-tabs > nav.tabs,
@@ -561,18 +552,13 @@
         z-index: 40;
     }
     .main { margin-bottom: 7rem; }
-    /* inner sub-tab navs (Stats, Industry, etc.) must NOT be fixed */
     #mainTabs .tab-content nav.tabs,
     #mainTabs .tab-content .tabs {
         position: static !important;
     }
-
-    /* Fixed-position guard: a CSS transform/filter/perspective on any
-       ancestor turns it into the containing block for position:fixed,
-       which would make the top bar / queue / nav scroll away on that tab
-       (this is why Civics — whose panes/animation wrappers may set a
-       transform — broke while others worked). Neutralize transforms on the
-       game's structural wrappers so fixed stays viewport-relative. */
+    /* Fixed-position guard: a transform/filter on an ancestor turns it into the
+       containing block for position:fixed, making the bars scroll away (this is
+       why Civics broke). Neutralize transforms on structural wrappers. */
     #mainColumn,
     #mainColumn > .b-tabs,
     #mainColumn > .b-tabs > section,
@@ -586,14 +572,11 @@
         perspective: none !important;
     }
 
-    /* (5) Storage tab: the game makes each row  .storage{display:flex}  with
-       two  >div{width:50%}  halves (Crate group | Container group), and the
-       resource NAME sits inside the first half. Long names (ALUMINIUM) can't
-       fit "NAME Crate − 0 +" in 50%, so the row wraps and the steppers vanish.
-       Fix: never wrap; give the name a fixed narrow slot that truncates; let
-       the two control halves share the rest equally. */
+    /* (5) Storage tab: never wrap rows; fixed narrow name slot; equal control
+       halves — so long names (ALUMINIUM) keep their Crate/Container steppers
+       on the same line instead of dropping them. */
     .main .storage {
-        flex-wrap: nowrap !important;   /* THE fix — was wrapping on Aluminium */
+        flex-wrap: nowrap !important;
         align-items: center;
         gap: .2rem;
         margin-left: 0 !important;
@@ -601,18 +584,15 @@
         width: 100%;
     }
     .main .storage > div {
-        width: 50% !important;          /* equal halves again, but no-wrap */
+        width: 50% !important;
         flex: 1 1 50%;
-        min-width: 0;                   /* allow shrink so children can truncate */
+        min-width: 0;
         margin-left: 0 !important;
         padding-left: 0 !important;
         display: flex;
         align-items: center;
         gap: .15rem;
     }
-    /* The resource name label: fixed small slot, truncate if needed, so it
-       never pushes the Crate/Container steppers off the row. Targets the
-       text node wrapper — in these rows the name is the first inline span. */
     .main .storage > div > span:first-child,
     .main .storage .res-name,
     .main .storage .label {
@@ -627,18 +607,35 @@
     }
     .main .storage-header .crate,
     .main .storage-header .container {
-        margin-left: .5rem !important;  /* was 13rem / 3rem */
+        margin-left: .5rem !important;
     }
     .main .storage .control {
         margin-right: .2rem !important;
         margin-left: 0 !important;
     }
-    /* compact steppers so both Crate and Container groups fit */
     .main .storage .add,
     .main .storage .sub { padding: 0 .35rem !important; margin: 0 .04rem !important; }
     .main .storage .current { min-width: 1.9rem !important; padding: 0 .1rem !important; }
-    /* reclaim the content gutter */
     .main > .columns > #mainColumn { padding-left: 0 !important; margin-left: 0 !important; }
     .main .content .tab-content,
     .main .content > .tab-content { padding-left: 0 !important; margin-left: 0 !important; }
+
+    /* Long lists (Storage tab when deep in the game) must scroll fully clear of
+       the fixed bottom nav AND the Advisor panel. The scroll-killer above makes
+       the page scroll, but the last rows sat under the fixed chrome. Give the
+       resource tab panes generous bottom padding so everything is reachable. */
+    .main .resTabs > section,
+    .main #tabResources,
+    .main #market,
+    .main #resStorage,
+    .main .resource .tab-content {
+        padding-bottom: 9rem !important;
+    }
+    /* Safety net: ensure the resTabs container itself never clips its content. */
+    .main .resTabs,
+    .main .resTabs > section {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
 }
