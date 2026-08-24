@@ -928,16 +928,92 @@ gameLoop('start');
         const human = hrs > 0 ? (hrs + 'h ' + (mins%60) + 'm') : (mins + 'm ' + (secs%60) + 's');
         try { messageQueue('Calculating ' + human + (wasCapped ? ' (capped ' + CAP_HOURS + 'h)' : '') + ' offline…', 'caution', false, ['progress']); } catch(e){}
 
-        // execGameLoops caps each call at longRatio*12. Use EXACTLY that as our
-        // chunk, so what we subtract equals what actually ran.
-        const chunkCap = longRatio * 12;
-        let remaining = totalPeriods;
-        let lastPctShown = -1;
-
-        // Fast-forward flag: makes fastLoop skip its heavy per-tick DOM redraws
-        // (craft labels etc.) during catch-up. Massive speedup — the UI is
-        // refreshed once at the end anyway.
+        // Skip fastLoop's heavy DOM work during the real-loop bursts we run at
+        // events (rate refresh). UI is refreshed once at the very end.
         window.__offlineFF = true;
+
+        const R = global.resource;
+        let tRemaining = Math.floor(elapsedMs / 1000);   // work in whole seconds
+        let seg = 0;
+        const MAX_SEG = 400;                              // safety bound
+
+        // Advance every visible resource by its net rate (.diff) over dt seconds,
+        // clamping at max (never over-credit a capped resource — matches game).
+        function accumulate(dt){
+            for (const k in R){
+                const r = R[k];
+                if (r && r.display && typeof r.diff === 'number' && r.diff !== 0){
+                    let na = (r.amount || 0) + r.diff * dt;
+                    if (r.max > 0 && na > r.max){ na = r.max; }
+                    if (na < 0){ na = 0; }
+                    r.amount = na;
+                }
+            }
+        }
+
+        // Run a short real-engine burst so the game completes any now-affordable
+        // queue item with its OWN code (buildings, tech, ARPA, ships — all the
+        // completion paths) and recomputes .diff rates for the next segment.
+        function refreshViaEngine(){
+            webWorker.s = true;
+            // ~a few game-seconds: enough for the queue processor + diffCalc to run.
+            execGameLoops(Math.max(longRatio * 2, 40));
+        }
+
+        // One event-driven step, scheduled async so the UI can breathe.
+        function step(){
+            if (tRemaining <= 0 || seg >= MAX_SEG){ finish(); return; }
+            seg++;
+
+            // Find the soonest event: a queue item finishing, a resource hitting
+            // its cap, or the end of the offline window.
+            let dt = tRemaining;
+            let evType = 'end';
+
+            const bq = (global.queue && global.queue.queue) ? global.queue.queue : [];
+            for (let i = 0; i < bq.length; i++){
+                const t = bq[i].time;
+                if (t != null && isFinite(t) && t > 0 && t < dt){ dt = t; evType = 'queue'; }
+            }
+            const rq = (global.r_queue && global.r_queue.queue) ? global.r_queue.queue : [];
+            for (let i = 0; i < rq.length; i++){
+                const t = rq[i].time;
+                if (t != null && isFinite(t) && t > 0 && t < dt){ dt = t; evType = 'queue'; }
+            }
+            for (const k in R){
+                const r = R[k];
+                if (r && r.display && r.max > 0 && r.diff > 0 && r.amount < r.max){
+                    const tCap = (r.max - r.amount) / r.diff;
+                    if (tCap < dt){ dt = tCap; evType = 'cap'; }
+                }
+            }
+
+            dt = Math.max(0, Math.min(dt, tRemaining));
+
+            // Guard: if an event is at t≈0 (already-capped resource, queue item
+            // ready), the engine burst below handles it; force a tiny minimum
+            // time step on non-event segments so we can't spin forever.
+            if (dt < 1 && evType === 'end'){ dt = tRemaining; }
+
+            // Advance resources over this constant-rate segment.
+            accumulate(dt);
+            tRemaining -= dt;
+
+            if (evType === 'queue'){
+                // Let the real engine complete the item and refresh rates.
+                refreshViaEngine();
+            } else if (evType === 'cap'){
+                // Resource(s) now capped. Refresh rates so dependent chains (e.g.
+                // a feeder capping) recompute correctly for the next segment.
+                refreshViaEngine();
+            }
+            // 'end' → loop exits next check.
+
+            const pct = Math.floor((1 - tRemaining / secs) * 100);
+            try { messageQueue('Offline catch-up… ' + pct + '% (seg ' + seg + ')', 'caution', true, ['progress']); } catch(e){}
+
+            setTimeout(step, 0);
+        }
 
         function finish(){
             window.__offlineFF = false;
@@ -949,34 +1025,17 @@ gameLoop('start');
                 }
             });
             gains.sort(function(a,b){ return b[1]-a[1]; });
-            let summary = 'Welcome back! Applied ' + human + ' offline.';
+            let summary = 'Welcome back! Applied ' + human + ' offline';
+            if (seg >= MAX_SEG){ summary += ' (partial)'; }
+            summary += '.';
             if (gains.length){
                 summary += ' Gained: ' + gains.slice(0,3).map(function(g){ return g[0] + ' +' + sizeApproximation(g[1],1); }).join(', ') + '.';
             }
             try { messageQueue(summary, 'success', false, ['progress']); } catch(e){}
+            // Final clean UI refresh.
+            try { gameLoop('stop'); gameLoop('start'); } catch(e){}
         }
 
-        function step(){
-            if (remaining <= 0){ finish(); return; }
-            // UI is skipped during fast-forward and we only show a toast, so we
-            // can run MANY engine-caps per frame. ~64 batches * 240 periods =
-            // ~15k periods/frame → a 12h catch-up finishes in ~12 frames.
-            var batches = 64;
-            while (batches-- > 0 && remaining > 0){
-                const want = Math.min(remaining, chunkCap);
-                webWorker.s = true;
-                execGameLoops(want);
-                remaining -= want;
-            }
-            if (totalPeriods > chunkCap * 2){
-                const pct = Math.floor((1 - remaining/totalPeriods) * 100);
-                if (pct >= lastPctShown + 5){
-                    lastPctShown = pct - (pct % 5);
-                    try { messageQueue('Offline catch-up… ' + lastPctShown + '%', 'caution', true, ['progress']); } catch(e){}
-                }
-            }
-            setTimeout(step, 0);
-        }
         setTimeout(step, 0);
       } catch (err){ window.__offlineFF = false; console.error('Offline progression failed:', err); }
     }
