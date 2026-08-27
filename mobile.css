@@ -1,5 +1,25 @@
 /* Mobile-friendly overrides for Evolve (phones & small tablets) */
 
+/* ---- Desktop tuning ------------------------------------------------------
+   Shrink the desktop base font to ~90% (matches the zoom level that fits
+   everything, including all top tabs, comfortably on screen). The game sizes
+   most things in rem, so lowering the root font scales the whole UI
+   down proportionally. Scoped to wider screens so mobile keeps its own 11px. */
+@media only screen and (min-width: 48.01rem) {
+    html {
+        font-size: 90% !important;   /* ~14.4px base (default 16px) */
+    }
+}
+
+/* Safety net: if the tab row still overflows, let it wrap so Settings stays
+   reachable. Applies on all widths. */
+#mainTabs > nav.tabs > ul,
+#mainTabs > .b-tabs > nav.tabs > ul,
+#mainTabs .tabs > ul {
+    flex-wrap: wrap !important;
+    overflow-x: auto;
+}
+
 @media only screen and (max-width: 48rem) {
 
     /* ---------- Global ---------- */
