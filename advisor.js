@@ -459,6 +459,106 @@
 
   var activeTab = 'alerts';
 
+  // ---- SMART ADVISOR: cure-map + bottleneck analysis ----------------------
+  // Which structures raise each resource's cap or production. Static game
+  // knowledge (safe to hardcode — this is the {knowledge:true}-style
+  // categorization). Each entry: what to build to fix a shortage of that
+  // resource, in rough early→late order. Costs are read live where possible.
+  var CURE = {
+    Knowledge: { caps: ['University', 'Library', 'Wardenclyffe', 'Bioscience Lab', 'Observatory'],
+                 note: 'raise Knowledge cap' },
+    Money:     { caps: ['Bank', 'Casino'], note: 'raise Money cap' },
+    Crate:     { caps: ['Freight Yard'], note: 'build Freight Yards (crate storage)' },
+    Container: { caps: ['Container Port'], note: 'build Container Ports' },
+    Food:      { caps: ['Farm', 'Silo', 'Soul Well'], note: 'raise Food cap / production' },
+    Lumber:    { caps: ['Lumber Yard', 'Shed'], note: 'raise Lumber cap' },
+    Stone:     { caps: ['Rock Quarry', 'Shed'], note: 'raise Stone cap' },
+    Furs:      { caps: ['Shed'], note: 'raise Furs cap (Sheds)' },
+    Copper:    { caps: ['Shed', 'Mine'], note: 'raise Copper cap / mining' },
+    Iron:      { caps: ['Shed', 'Mine'], note: 'raise Iron cap / mining' },
+    Aluminium: { caps: ['Shed', 'Metal Refinery'], note: 'raise Aluminium cap; Aluminium comes from Stone via quarry workers' },
+    Cement:    { caps: ['Shed', 'Cement Plant'], note: 'raise Cement cap / production' },
+    Coal:      { caps: ['Shed', 'Coal Mine'], note: 'raise Coal cap / mining' },
+    Oil:       { caps: ['Fuel Depot', 'Oil Derrick'], note: 'raise Oil cap / extraction' },
+    Titanium:  { caps: ['Storage (Shed/Warehouse)'], note: 'raise Titanium cap' },
+    Steel:     { caps: ['Storage (Shed/Warehouse)'], note: 'raise Steel cap; Steel needs Iron + Coal (smelter fuel)' },
+    Iridium:   { caps: ['Storage'], note: 'raise Iridium cap' },
+    Helium_3:  { caps: ['Fuel Depot', 'Gas Fuel Depot'], note: 'raise Helium-3 cap' },
+    Uranium:   { caps: ['Storage'], note: 'Uranium is a Coal byproduct — mine more Coal or run coal power' }
+  };
+
+  // Feeder chains: if X is short, its upstream feeders matter.
+  var FEEDER = {
+    Steel: ['Iron', 'Coal'], Aluminium: ['Stone'], Alloy: ['Copper', 'Aluminium'],
+    Polymer: ['Oil', 'Lumber'], Sheet_Metal: ['Aluminium'], Uranium: ['Coal'],
+    Cement: ['Stone'], Brick: ['Cement']
+  };
+
+  function fmt(n) {
+    if (n == null || !isFinite(n)) return '?';
+    var a = Math.abs(n);
+    if (a >= 1e9) return (n/1e9).toFixed(1)+'B';
+    if (a >= 1e6) return (n/1e6).toFixed(1)+'M';
+    if (a >= 1e3) return (n/1e3).toFixed(1)+'K';
+    return Math.round(n).toString();
+  }
+  function human(sec) {
+    if (!isFinite(sec) || sec < 0) return null;
+    if (sec < 60) return Math.round(sec)+'s';
+    if (sec < 3600) return Math.floor(sec/60)+'m';
+    return Math.floor(sec/3600)+'h '+Math.floor((sec%3600)/60)+'m';
+  }
+
+  // Core: find the real bottlenecks and prescribe specific fixes.
+  function analyzeBottlenecks(save) {
+    var R = save.resource || {};
+    var out = [];
+
+    // 1) Capped resources with positive income = wasted production.
+    for (var k in R) {
+      var r = R[k];
+      if (!r || !r.display) continue;
+      if (r.max > 0 && r.amount >= r.max * 0.98 && r.diff > 0) {
+        var cure = CURE[k];
+        var msg = k + ' is capped (' + fmt(r.amount) + '/' + fmt(r.max) + '), wasting +' + fmt(r.diff) + '/s.';
+        var fix = cure ? ('Fix: ' + cure.note + ' — ' + cure.caps.slice(0,3).join(', ') + '.') : 'Raise its storage cap.';
+        out.push({ sev: 2, title: msg, detail: fix, res: k });
+      }
+    }
+
+    // 2) Draining resources (negative income, will hit zero).
+    for (var k2 in R) {
+      var r2 = R[k2];
+      if (!r2 || !r2.display) continue;
+      if (r2.diff < 0 && r2.amount > 0) {
+        var tEmpty = r2.amount / (-r2.diff);
+        if (tEmpty < 3600) { // only warn if emptying within an hour
+          var feed = FEEDER[k2];
+          var d = 'Draining — empty in ~' + human(tEmpty) + '.';
+          if (feed) d += ' It consumes ' + feed.join(' + ') + '; check those are in surplus.';
+          else d += ' Reduce consumers or add production.';
+          out.push({ sev: (tEmpty < 300 ? 3 : 2), title: k2 + ' is draining (' + fmt(r2.diff) + '/s)', detail: d, res: k2 });
+        }
+      }
+    }
+
+    // 3) Queue items stalled on a "Never" resource (cap below requirement).
+    var bq = (save.queue && save.queue.queue) ? save.queue.queue : [];
+    for (var i = 0; i < bq.length; i++) {
+      var it = bq[i];
+      if (it && (it.time === -1 || it.time === -9999999 || (it.time != null && !isFinite(it.time)))) {
+        out.push({ sev: 3, title: (it.label || 'A queued build') + ' can never complete',
+                   detail: 'A required resource is capped below its cost. Raise that resource\u2019s storage cap first, then it will progress.' });
+      }
+    }
+
+    // Sort by severity (drains/never first), cap the list.
+    out.sort(function(a,b){ return b.sev - a.sev; });
+    return out.slice(0, 8);
+  }
+
+  // ---- END SMART ADVISOR --------------------------------------------------
+
   function injectStyle() {
     if (document.getElementById('adv-style')) return;
     var s = document.createElement('style'); s.id = 'adv-style'; s.textContent = STYLE;
@@ -474,6 +574,7 @@
         '<span class="count" id="adv-count">0</span><span class="chev">\u25BC</span></div>' +
       '<div id="adv-tabs">' +
         '<div class="adv-tab active" data-tab="alerts">Alerts</div>' +
+        '<div class="adv-tab" data-tab="fix">Fix</div>' +
         '<div class="adv-tab" data-tab="chain">Chain</div>' +
         '<div class="adv-tab" data-tab="guide">Guide</div></div>' +
       '<div id="adv-body"></div>' +
@@ -525,6 +626,23 @@
     body.innerHTML = cards.map(function (c) {
       return '<div class="adv-card ' + c.sev + '"><p class="t">' + esc(c.title) +
         '</p><p class="d">' + esc(c.detail) + '</p></div>';
+    }).join('');
+  }
+
+  function renderFix(save, body, countEl) {
+    var items = analyzeBottlenecks(save);
+    countEl.textContent = items.length;
+    countEl.style.background = items.length ? '#3a1f1f' : '#1f272e';
+    countEl.style.color = items.length ? '#ff8b84' : '#8fa1b3';
+    if (!items.length) {
+      body.innerHTML = '<div class="adv-card good"><p class="t">No bottlenecks detected.</p>' +
+        '<p class="d">Nothing capped, draining, or stalled right now. Keep building toward your next goal.</p></div>';
+      return;
+    }
+    body.innerHTML = items.map(function (it) {
+      var cls = it.sev >= 3 ? 'warn' : (it.sev === 2 ? 'info' : 'good');
+      return '<div class="adv-card ' + cls + '"><p class="t">' + esc(it.title) +
+        '</p><p class="d">' + esc(it.detail) + '</p></div>';
     }).join('');
   }
 
@@ -588,6 +706,7 @@
 
     if (activeTab === 'chain') renderChain(save, body, countEl);
     else if (activeTab === 'guide') renderGuide(save, body, countEl);
+    else if (activeTab === 'fix') renderFix(save, body, countEl);
     else renderAlerts(save, body, countEl);
 
     if (statusEl) {
